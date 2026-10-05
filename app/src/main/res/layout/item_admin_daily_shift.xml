@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="94dp" android:layout_marginBottom="12dp" app:cardBackgroundColor="@android:color/white" app:cardCornerRadius="16dp" app:strokeColor="#B5B5B5" app:strokeWidth="1dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:padding="12dp">
+        <TextView android:id="@+id/disabled_daily_avatar" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/bg_module_staff" android:gravity="center" android:text="L" android:textColor="#197A8A" android:textSize="22sp" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Lun 15/09 2026" android:textColor="#777777" android:textSize="16sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:drawableStart="@drawable/ic_sun" android:drawableTint="#D5A916" android:drawablePadding="6dp" android:text="9:00 a.m. - 7:00 p.m." android:textColor="#D5A916" android:textSize="16sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:drawableStart="@drawable/ic_coffee" android:drawableTint="#147A3E" android:drawablePadding="6dp" android:text="11:00 a.m. - 12:00 p.m." android:textColor="#147A3E" android:textSize="16sp" />
+        </LinearLayout>
+        <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/daily_shift_active" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" />
+        <ImageView android:id="@+id/action_edit_daily_shift" android:layout_width="40dp" android:layout_height="40dp" android:clickable="true" android:focusable="true" android:contentDescription="Editar jornada" android:padding="9dp" android:src="@drawable/ic_edit" android:tint="#4C4C56" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

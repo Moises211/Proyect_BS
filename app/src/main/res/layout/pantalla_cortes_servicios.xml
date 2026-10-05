@@ -1,0 +1,13 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#E4E4E4" android:orientation="vertical" android:fitsSystemWindows="true">
+    <include layout="@layout/toolbar_admin_menu" />
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:padding="20dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MODULOS DEL SISTEMA" android:textColor="#242424" android:textSize="16sp" android:textStyle="bold" />
+            <include android:id="@+id/card_admin_services" layout="@layout/item_cuts_services_module" android:layout_width="match_parent" android:layout_height="120dp" android:layout_marginTop="30dp" />
+            <include android:id="@+id/card_service_hours" layout="@layout/item_service_hours_module" android:layout_width="match_parent" android:layout_height="120dp" android:layout_marginTop="16dp" />
+            <include android:id="@+id/card_promotions" layout="@layout/item_promotions_module" android:layout_width="match_parent" android:layout_height="120dp" android:layout_marginTop="16dp" />
+            <include android:id="@+id/card_admin_benefits" layout="@layout/item_benefits_module" android:layout_width="match_parent" android:layout_height="120dp" android:layout_marginTop="16dp" />
+        </LinearLayout>
+    </ScrollView>
+    <include layout="@layout/admin_bottom_navigation" />
+</LinearLayout>

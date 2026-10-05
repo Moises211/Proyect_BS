@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="96dp" android:layout_marginBottom="12dp" app:cardBackgroundColor="@android:color/white" app:cardCornerRadius="16dp" app:strokeColor="#B5B5B5" app:strokeWidth="1dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:padding="12dp">
+        <TextView android:id="@+id/disabled_schedule_avatar" android:layout_width="50dp" android:layout_height="50dp" android:background="@drawable/bg_module_staff" android:gravity="center" android:text="JC" android:textColor="#197A8A" android:textSize="20sp" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Juan Carlos Canales" android:textColor="#253047" android:textSize="16sp" android:textStyle="bold" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:drawableStart="@drawable/ic_schedule" android:drawableTint="#D5A916" android:drawablePadding="6dp" android:text="Turno Completo" android:textColor="#D5A916" android:textSize="15sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="9:00 a.m. - 7:00 p.m." android:textColor="#197A8A" android:textSize="15sp" />
+        </LinearLayout>
+        <ImageView android:id="@+id/action_open_schedule" android:layout_width="36dp" android:layout_height="48dp" android:src="@drawable/ic_chevron_right" android:tint="#197A8A" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

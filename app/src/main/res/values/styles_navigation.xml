@@ -1,0 +1,13 @@
+<resources>
+    <style name="AdminBottomNavigationActiveIndicator">
+        <item name="android:color">#257787</item>
+        <item name="android:width">56dp</item>
+        <item name="android:height">40dp</item>
+        <item name="shapeAppearance">@style/AdminBottomNavigationActiveIndicatorShape</item>
+    </style>
+
+    <style name="AdminBottomNavigationActiveIndicatorShape">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+</resources>

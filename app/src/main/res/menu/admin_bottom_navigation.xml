@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_cuts"
+        android:icon="@drawable/ic_content_cut"
+        android:title="Cortes y Servicios" />
+    <item
+        android:id="@+id/nav_staff"
+        android:icon="@drawable/ic_people"
+        android:title="Personal y Turnos" />
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_home"
+        android:title="Inicio" />
+    <item
+        android:id="@+id/nav_clients"
+        android:icon="@drawable/ic_badge"
+        android:title="Control Clientes" />
+    <item
+        android:id="@+id/nav_profile"
+        android:icon="@drawable/ic_person"
+        android:title="Perfil Usuario" />
+</menu>

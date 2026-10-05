@@ -1,0 +1,19 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <!-- Cambiamos Light por Dark para desactivar la auto-inversión del OS -->
+    <style name="Base.Theme.Proyect_BS" parent="Theme.Material3.Dark.NoActionBar">
+
+        <!-- Bloquea la inversión forzada de colores a nivel global (API 29+) -->
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+
+        <!-- Search fields intentionally keep the light-theme appearance. -->
+        <item name="adminSearchBackground">@android:color/white</item>
+        <item name="adminSearchTextColor">#333333</item>
+        <item name="adminSearchHintColor">#757575</item>
+        <item name="adminSearchIconColor">#464646</item>
+
+        <!-- Customize your dark theme here. -->
+        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+    </style>
+
+</resources>

@@ -1,0 +1,16 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.Proyect_BS" parent="Theme.Material3.Light.NoActionBar">
+        <item name="adminSearchBackground">@android:color/white</item>
+        <item name="adminSearchTextColor">#333333</item>
+        <item name="adminSearchHintColor">#757575</item>
+        <item name="adminSearchIconColor">#464646</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:statusBarColor">#C51B20</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Theme.Proyect_BS" parent="Base.Theme.Proyect_BS" />
+
+</resources>

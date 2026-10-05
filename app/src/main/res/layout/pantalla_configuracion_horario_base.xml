@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E4E4E4"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar_base_schedule"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="#C51B20"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="@android:color/white"
+        app:subtitle="Configuración Horario Base"
+        app:subtitleTextColor="@android:color/white"
+        app:title="Good Cuts Admin"
+        app:titleTextColor="@android:color/white" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="112dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="16dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:background="@drawable/bg_base_schedule_panel"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Configurando Plantilla Base:\n\nEstos horarios se aplicarán automáticamente a cada nueva semana"
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="Configuración"
+                android:src="@drawable/ic_settings" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="#147A3E"
+                android:gravity="center"
+                android:text="Descansos 1/7"
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="#287F8D"
+                android:gravity="center"
+                android:text="Recesos 4/7"
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="12dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <include android:id="@+id/base_day_one" layout="@layout/item_base_schedule_day" />
+            <include android:id="@+id/base_day_two" layout="@layout/item_base_schedule_day" />
+            <include android:id="@+id/base_day_three" layout="@layout/item_base_schedule_day" />
+            <include android:id="@+id/base_day_four" layout="@layout/item_base_schedule_day" />
+            <include android:id="@+id/base_day_five" layout="@layout/item_base_schedule_day" />
+            <include android:id="@+id/base_day_six" layout="@layout/item_base_schedule_day" />
+            <include android:id="@+id/base_day_seven" layout="@layout/item_base_schedule_day" />
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/action_base_schedule_cancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:text="Cancelar"
+            android:textColor="#C51B20"
+            app:backgroundTint="@android:color/white"
+            app:cornerRadius="22dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/action_schedule_save"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/ic_save"
+            app:iconTint="@android:color/white"
+            app:iconPadding="6dp"
+            android:text="Guardar"
+            android:textColor="@android:color/white"
+            app:backgroundTint="#287F8D"
+            app:cornerRadius="22dp" />
+    </LinearLayout>
+    <include layout="@layout/admin_bottom_navigation" />
+</LinearLayout>

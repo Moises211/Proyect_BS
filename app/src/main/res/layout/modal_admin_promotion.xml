@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="20dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Ingresar Promoción"
+            android:textColor="#263248"
+            android:textSize="20sp" />
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/modal_promotion_notification_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            app:thumbTint="@color/service_switch_thumb"
+            app:trackTint="@color/service_switch_track" />
+    </LinearLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDD9DF" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="10dp" android:text="Imagen Promocional"
+        android:textColor="#263248" android:textSize="16sp" />
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="82dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_admin_modal_image">
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Agregar imagen promocional"
+            android:padding="22dp"
+            android:src="@drawable/ic_add"
+            android:tint="#888391" />
+    </FrameLayout>
+
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="10dp" android:text="Título" android:textColor="#263248" android:textSize="16sp" />
+    <EditText
+        android:id="@+id/modal_promotion_title"
+        android:layout_width="match_parent"
+        android:layout_height="42dp"
+        android:background="@drawable/bg_admin_modal_field"
+        android:hint="Especial Patrias"
+        android:singleLine="true"
+        android:textSize="16sp" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" android:orientation="horizontal">
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Tipo" android:textColor="#263248" android:textSize="16sp" />
+            <Spinner android:id="@+id/modal_promotion_type" android:layout_width="match_parent"
+                android:layout_height="42dp" android:background="@drawable/bg_admin_modal_field" />
+        </LinearLayout>
+        <Space android:layout_width="12dp" android:layout_height="1dp" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical">
+            <TextView android:id="@+id/modal_promotion_value_label" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Catálogo"
+                android:textColor="#263248" android:textSize="16sp" />
+            <EditText android:id="@+id/modal_promotion_value" android:layout_width="match_parent"
+                android:layout_height="42dp" android:background="@drawable/bg_admin_modal_field"
+                android:hint="Combo Barba" android:singleLine="true" android:textSize="16sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="8dp" android:orientation="horizontal">
+        <EditText android:id="@+id/modal_promotion_start" android:layout_width="0dp"
+            android:layout_height="42dp" android:layout_weight="1" android:background="@drawable/bg_admin_modal_field"
+            android:hint="Inicio  01/09/26" android:singleLine="true" android:textSize="15sp" />
+        <Space android:layout_width="12dp" android:layout_height="1dp" />
+        <EditText android:id="@+id/modal_promotion_end" android:layout_width="0dp"
+            android:layout_height="42dp" android:layout_weight="1" android:background="@drawable/bg_admin_modal_field"
+            android:hint="Final  16/09/26" android:singleLine="true" android:textSize="15sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/modal_promotion_notification_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDD9DF" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:gravity="center_vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Notificación" android:textColor="#263248" android:textSize="20sp" />
+            <ImageView android:id="@+id/modal_promotion_notification_icon" android:layout_width="24dp"
+                android:layout_height="24dp" android:layout_marginStart="8dp"
+                android:src="@drawable/ic_notifications" android:tint="#D5A916" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="Mensaje Notificación"
+            android:textColor="#263248" android:textSize="16sp" />
+        <EditText android:id="@+id/modal_promotion_message" android:layout_width="match_parent"
+            android:layout_height="42dp" android:background="@drawable/bg_admin_modal_field"
+            android:hint="En Barba" android:singleLine="true" android:textSize="16sp" />
+    </LinearLayout>
+</LinearLayout>

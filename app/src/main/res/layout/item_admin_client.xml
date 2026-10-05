@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="94dp"
+    android:layout_marginBottom="12dp"
+    android:clickable="false"
+    app:cardBackgroundColor="@android:color/white"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:strokeColor="#B5B5B5"
+    app:strokeWidth="1dp">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:padding="12dp">
+        <TextView
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_module_clients"
+            android:gravity="center"
+            android:text="JC"
+            android:textColor="#5B4392"
+            android:textSize="20sp" />
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Juan Carlos Canales"
+                android:textColor="#253047"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_content_cut"
+                android:drawableTint="#C51B20"
+                android:drawablePadding="6dp"
+                android:text="Barba"
+                android:textColor="#C51B20"
+                android:textSize="15sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableStart="@drawable/ic_phone"
+                android:drawableTint="#197A8A"
+                android:drawablePadding="6dp"
+                android:text="2233-4455"
+                android:textColor="#197A8A"
+                android:textSize="15sp" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="86dp"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:minWidth="44dp"
+                    android:minHeight="44dp"
+                    android:contentDescription="Puntos de beneficios"
+                    android:src="@drawable/ic_gift"
+                    android:tint="#D5A916" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="150Pts"
+                    android:textColor="#147A3E"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:id="@+id/action_client_appointments"
+                    android:minWidth="44dp"
+                    android:minHeight="44dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Citas del cliente"
+                    android:src="@drawable/ic_event"
+                    android:tint="#6849B8" />
+                <ImageView
+                    android:id="@+id/action_edit_client"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="34dp"
+                    android:minWidth="44dp"
+                    android:minHeight="44dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Editar cliente"
+                    android:src="@drawable/ic_edit"
+                    android:tint="#4C4C56" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

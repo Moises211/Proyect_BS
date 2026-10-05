@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="#E4E4E4" android:fitsSystemWindows="true" android:orientation="vertical">
+    <com.google.android.material.appbar.MaterialToolbar android:id="@+id/toolbar_personal_schedule" android:layout_width="match_parent" android:layout_height="64dp" android:background="#C51B20" app:navigationIcon="@drawable/ic_arrow_back" app:navigationIconTint="@android:color/white" app:subtitle="Cronograma Juan Carlos Canales" app:subtitleTextColor="@android:color/white" app:title="Good Cuts Admin" app:titleTextColor="@android:color/white" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="112dp"
+        android:layout_marginHorizontal="28dp"
+        android:layout_marginTop="16dp"
+        android:orientation="vertical">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="78dp"
+            android:background="@drawable/bg_base_shift_header"
+            android:gravity="center"
+            android:text="Datos Turno Base&#10;Turno: Completo&#10;Receso: Si (11:00 a.m. - 12:00 p.m.)"
+            android:textColor="@android:color/white"
+            android:textSize="16sp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="#147A3E"
+                android:gravity="center"
+                android:text="Descansos  1/7"
+                android:textColor="@android:color/white"
+                android:textSize="16sp" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="#2B8292"
+                android:gravity="center"
+                android:text="Recesos  4/7"
+                android:textColor="@android:color/white"
+                android:textSize="16sp" />
+        </LinearLayout>
+    </LinearLayout>
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:paddingStart="12dp" android:paddingTop="24dp" android:paddingEnd="12dp" android:paddingBottom="12dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+            <include android:id="@+id/daily_shift_one" layout="@layout/item_admin_daily_shift" />
+            <include android:id="@+id/daily_shift_two" layout="@layout/item_admin_daily_shift" />
+            <include android:id="@+id/daily_shift_three" layout="@layout/item_admin_daily_shift" />
+            <include android:id="@+id/daily_shift_four" layout="@layout/item_admin_daily_shift" />
+        </LinearLayout>
+    </ScrollView>
+    <com.google.android.material.button.MaterialButton android:id="@+id/action_base_shift" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="end" android:layout_margin="12dp" android:drawableStart="@drawable/ic_schedule" android:drawableTint="@android:color/white" android:drawablePadding="6dp" android:text="Turno Base" app:backgroundTint="#D5A916" app:cornerRadius="22dp" />
+    <include layout="@layout/admin_bottom_navigation" />
+</LinearLayout>

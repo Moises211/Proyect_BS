@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E4E4E4"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar_benefits_client"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="#C51B20"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="@android:color/white"
+        app:subtitle="Administración Beneficios Jose Carlos Canales"
+        app:subtitleTextColor="@android:color/white"
+        app:title="Good Cuts Admin"
+        app:titleTextColor="@android:color/white" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/admin_search_field"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp"
+        android:hint="Buscar Beneficio..."
+        app:boxBackgroundColor="@android:color/white"
+        app:boxBackgroundMode="filled"
+        app:boxStrokeWidth="0dp"
+        app:boxStrokeWidthFocused="0dp"
+        app:boxCornerRadiusBottomEnd="16dp"
+        app:boxCornerRadiusBottomStart="16dp"
+        app:boxCornerRadiusTopEnd="16dp"
+        app:boxCornerRadiusTopStart="16dp"
+        app:endIconDrawable="@drawable/ic_search"
+        app:endIconMode="custom">
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:layout_marginHorizontal="28dp"
+        android:orientation="vertical">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="28dp"
+            android:background="@drawable/bg_tariff_base_top"
+            android:gravity="center_vertical"
+            android:paddingStart="18dp"
+            android:text="Tarifa Base"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="30dp"
+            android:background="@drawable/bg_tariff_base_bottom"
+            android:gravity="center_vertical"
+            android:paddingStart="18dp"
+            android:text="Gasto de $ 1.00 = 1 Pts."
+            android:textColor="#E0B51A"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:layout_marginHorizontal="28dp"
+        android:orientation="horizontal">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="#147A3E"
+            android:gravity="center"
+            android:text="Activas  2/3"
+            android:textColor="@android:color/white"
+            android:textSize="16sp" />
+        <Spinner
+            android:id="@+id/dropdown_benefit_status"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="#2B8292"
+            android:gravity="center"
+            android:spinnerMode="dropdown" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingTop="20dp"
+        android:paddingBottom="12dp"
+        android:scrollbars="none">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <include
+                android:id="@+id/benefit_available_one"
+                layout="@layout/item_admin_benefit_available" />
+            <include
+                android:id="@+id/benefit_available_two"
+                layout="@layout/item_admin_benefit_available" />
+            <include
+                android:id="@+id/benefit_redeemed"
+                layout="@layout/item_admin_benefit_redeemed" />
+        </LinearLayout>
+    </ScrollView>
+
+    <include layout="@layout/admin_bottom_navigation" />
+</LinearLayout>

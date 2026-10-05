@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="#E4E4E4" android:fitsSystemWindows="true" android:orientation="vertical">
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar_barbers"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="#C51B20"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="@android:color/white"
+        app:subtitle="Cronograma Barberos"
+        app:subtitleTextColor="@android:color/white"
+        app:title="Good Cuts Admin"
+        app:titleTextColor="@android:color/white" />
+
+    <com.google.android.material.textfield.TextInputLayout
+
+        android:id="@+id/admin_search_field"
+
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+
+        android:layout_width="match_parent"
+
+        android:layout_height="wrap_content"
+
+        android:layout_margin="12dp" android:hint="Buscar Barberos"
+
+        app:boxBackgroundColor="@android:color/white" app:boxBackgroundMode="filled"
+
+        app:boxStrokeWidth="0dp" app:boxStrokeWidthFocused="0dp"
+
+        app:boxCornerRadiusTopStart="16dp"
+
+        app:boxCornerRadiusTopEnd="16dp"
+
+        app:boxCornerRadiusBottomStart="16dp"
+
+        app:boxCornerRadiusBottomEnd="16dp"
+
+        app:endIconDrawable="@drawable/ic_search"
+
+        app:endIconMode="custom"
+        app:endIconTint="#FFFFFF"
+        app:hintTextColor="#49454F">
+
+
+        <com.google.android.material.textfield.TextInputEditText
+
+            android:layout_width="match_parent"
+
+            android:layout_height="wrap_content"
+
+            android:singleLine="true" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="34dp" android:layout_marginHorizontal="28dp">
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@drawable/bg_filter_active_top" android:gravity="center" android:text="Activos  2/3" android:textColor="@android:color/white" android:textSize="16sp" />
+        <Spinner android:id="@+id/barbers_status_spinner" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@drawable/bg_filter_history_top" android:spinnerMode="dropdown" />
+    </LinearLayout>
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:padding="12dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+            <include android:id="@+id/barber_item_one" layout="@layout/item_admin_barber" />
+            <include android:id="@+id/barber_item_two" layout="@layout/item_admin_barber" />
+            <include android:id="@+id/barber_item_three" layout="@layout/item_admin_barber" />
+        </LinearLayout>
+    </ScrollView>
+    <com.google.android.material.floatingactionbutton.FloatingActionButton android:id="@+id/action_add_barber" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="end" android:layout_margin="16dp" android:src="@drawable/ic_add" app:backgroundTint="#C51B20" />
+    <include layout="@layout/admin_bottom_navigation" />
+</LinearLayout>

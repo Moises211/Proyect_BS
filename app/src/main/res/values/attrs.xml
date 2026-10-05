@@ -1,0 +1,6 @@
+<resources>
+    <attr name="adminSearchBackground" format="color" />
+    <attr name="adminSearchTextColor" format="color" />
+    <attr name="adminSearchHintColor" format="color" />
+    <attr name="adminSearchIconColor" format="color" />
+</resources>

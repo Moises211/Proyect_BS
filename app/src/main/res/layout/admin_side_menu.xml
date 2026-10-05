@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Juan Carlos Canales"
+        android:textColor="#242424"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Administrador"
+        android:textColor="#777777"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:id="@+id/menu_admin_home"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:layout_marginTop="34dp"
+        android:background="@drawable/bg_menu_item"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="18dp"
+        android:tag="menu_admin_home">
+        <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_home" android:tint="#197A8A" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="18dp" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Inicio" android:textColor="#242424" android:textSize="16sp" android:textStyle="bold" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Página Inicial" android:textColor="#888888" android:textSize="13sp" />
+        </LinearLayout>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="#777777" android:textSize="28sp" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/menu_admin_services" style="@style/AdminMenuItem">
+        <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_content_cut" android:tint="#197A8A" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="18dp" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Cortes y Servicios" android:textColor="#242424" android:textSize="16sp" android:textStyle="bold" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Horarios, Promoción y Beneficios" android:textColor="#888888" android:textSize="13sp" />
+        </LinearLayout>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="#777777" android:textSize="28sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/menu_admin_staff" style="@style/AdminMenuItem">
+        <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_people" android:tint="#197A8A" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="18dp" android:layout_weight="1" android:text="Personal y Turnos\nAdministración Personal" android:textColor="#242424" android:textSize="16sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="#777777" android:textSize="28sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/menu_admin_clients" style="@style/AdminMenuItem">
+        <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_people" android:tint="#197A8A" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="18dp" android:layout_weight="1" android:text="Control Clientes\nServicios Clientes" android:textColor="#242424" android:textSize="16sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="#777777" android:textSize="28sp" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/menu_admin_profile" style="@style/AdminMenuItem">
+        <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_person" android:tint="#197A8A" />
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="18dp" android:layout_weight="1" android:text="Perfil de Usuario\nConfiguración y Cuenta" android:textColor="#242424" android:textSize="16sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textColor="#777777" android:textSize="28sp" />
+    </LinearLayout>
+    <Button
+        android:id="@+id/menu_admin_logout"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="18dp"
+        android:backgroundTint="#DD1E2F"
+        android:text="Cerrar sesión"
+        android:textColor="@android:color/white" />
+</LinearLayout>

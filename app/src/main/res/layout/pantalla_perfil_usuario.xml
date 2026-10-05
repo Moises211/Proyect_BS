@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E4E4E4"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar_profile"
+        android:layout_width="match_parent"
+        android:layout_height="68dp"
+        android:background="#C51B20"
+        app:navigationIcon="@drawable/ic_menu"
+        app:navigationIconTint="@android:color/white"
+        app:subtitle="Perfil y Preferencias"
+        app:subtitleTextColor="@android:color/white"
+        app:title="Good Cuts Barbero"
+        app:titleTextColor="@android:color/white" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:padding="8dp"
+        android:scrollbars="none">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="174dp"
+                app:cardBackgroundColor="@android:color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:layout_width="86dp"
+                            android:layout_height="86dp"
+                            android:background="@drawable/bg_profile_avatar"
+                            android:gravity="center"
+                            android:text="JC"
+                            android:textColor="@android:color/white"
+                            android:textSize="26sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="18dp"
+                            android:text="●  Juan Carlos Canales\n☆  Administrador\n✉  admin@gmail.com"
+                            android:textColor="#252525"
+                            android:textSize="16sp"
+                            android:lineSpacingExtra="4dp" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp">
+                        <TextView
+                            android:id="@+id/action_edit_profile"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:padding="8dp"
+                            android:text="Editar Datos"
+                            android:textColor="#777777"
+                            android:textSize="16sp" />
+                        <TextView
+                            android:id="@+id/action_change_password"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:padding="8dp"
+                            android:text="Cambiar Contraseña"
+                            android:textColor="#777777"
+                            android:textSize="16sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="126dp"
+                android:layout_marginTop="10dp"
+                app:cardBackgroundColor="@android:color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="25dp"
+                        android:background="@drawable/bg_profile_section"
+                        android:gravity="center_vertical"
+                        android:drawableStart="@drawable/ic_edit"
+                        android:drawableTint="@android:color/white"
+                        android:drawablePadding="6dp"
+                        android:text="Preferencias de app"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:id="@+id/profile_theme_label"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Modo Claro\nAlternar Contraste de la interfaz"
+                            android:textColor="#333333"
+                            android:textSize="16sp" />
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/profile_theme_switch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="110dp"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="@android:color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="25dp"
+                        android:background="@drawable/bg_profile_section"
+                        android:gravity="center_vertical"
+                        android:text="  ◉  Idioma de la App"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Idioma Seleccionado"
+                            android:textColor="#333333"
+                            android:textSize="16sp" />
+                        <Spinner
+                            android:id="@+id/profile_language_spinner"
+                            android:layout_width="128dp"
+                            android:layout_height="42dp"
+                            android:background="@drawable/bg_profile_section"
+                            android:gravity="center"
+                            android:spinnerMode="dropdown" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="180dp"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="@android:color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="25dp"
+                        android:background="@drawable/bg_profile_section"
+                        android:gravity="center_vertical"
+                        android:text="  !  Sobre Good Cuts"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:lineSpacingExtra="10dp"
+                        android:text="Versión de la Aplicación     V  ·  1.1\nTérminos y condiciones       ›\nPolítica de Privacidad          ›"
+                        android:textColor="#333333"
+                        android:textSize="16sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/action_logout"
+                android:layout_width="134dp"
+                android:layout_height="48dp"
+                android:layout_gravity="center"
+                android:layout_marginTop="8dp"
+                android:text="Cerrar Sesión"
+                android:textSize="16sp"
+                app:backgroundTint="#C51B20"
+                app:cornerRadius="12dp" />
+        </LinearLayout>
+    </ScrollView>
+    <include layout="@layout/admin_bottom_navigation" />
+</LinearLayout>

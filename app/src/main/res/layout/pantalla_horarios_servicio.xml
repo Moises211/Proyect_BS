@@ -1,0 +1,111 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E4E4E4"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar_service_hours"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="#C51B20"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="@android:color/white"
+        app:subtitle="Horarios de Servicio"
+        app:subtitleTextColor="@android:color/white"
+        app:title="Good Cuts Admin"
+        app:titleTextColor="@android:color/white" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="42dp"
+        android:layout_marginHorizontal="28dp"
+        android:layout_marginTop="14dp">
+        <TextView
+            android:id="@+id/action_previous_week"
+            android:layout_width="34dp"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_week_green_left"
+            android:gravity="center"
+            android:text="‹"
+            android:textColor="@android:color/white"
+            android:textSize="20sp" />
+        <TextView
+            android:id="@+id/action_select_week"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_week_green_plain"
+            android:gravity="center"
+            android:text="Sem 14/09-20/09"
+            android:textColor="@android:color/white"
+            android:textSize="14sp" />
+        <TextView
+            android:id="@+id/week_days_summary"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_week_teal_plain"
+            android:gravity="center"
+            android:text="Días 6/7"
+            android:textColor="@android:color/white"
+            android:textSize="14sp" />
+        <TextView
+            android:id="@+id/action_next_week"
+            android:layout_width="34dp"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_week_teal_right"
+            android:gravity="center"
+            android:text="›"
+            android:textColor="@android:color/white"
+            android:textSize="20sp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="12dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <include android:id="@+id/service_daily_shift_one" layout="@layout/item_admin_daily_shift" />
+            <include android:id="@+id/service_daily_shift_two" layout="@layout/item_admin_daily_shift" />
+            <include android:id="@+id/service_daily_shift_three" layout="@layout/item_admin_daily_shift" />
+            <include android:id="@+id/service_daily_shift_four" layout="@layout/item_admin_daily_shift" />
+            <include android:id="@+id/service_daily_shift_five" layout="@layout/item_admin_daily_shift" />
+            <include android:id="@+id/service_daily_shift_six" layout="@layout/item_admin_daily_shift" />
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/action_service_shifts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawableStart="@drawable/ic_schedule"
+            android:drawableTint="@android:color/white"
+            android:drawablePadding="6dp"
+            android:text="Turnos"
+            android:textColor="@android:color/white"
+            app:backgroundTint="#D5A916"
+            app:cornerRadius="22dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/action_base_schedule"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Configuración Horario Base"
+            android:textColor="@android:color/white"
+            app:backgroundTint="#C51B20"
+            app:cornerRadius="22dp" />
+    </LinearLayout>
+    <include layout="@layout/admin_bottom_navigation" />
+</LinearLayout>
