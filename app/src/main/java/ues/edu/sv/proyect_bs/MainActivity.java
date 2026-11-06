@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
             findViewById(R.id.toolbar_base_schedule).setOnClickListener(v ->
                     showScreen(R.layout.pantalla_horarios_servicio));
             findViewById(R.id.action_base_schedule_cancel).setOnClickListener(v ->
-                    new MaterialAlertDialogBuilder(this)
+                    createLightDialogBuilder()
                             .setTitle("Cancelar configuración")
                             .setMessage("¿Deseas cancelar la configuración del horario base?")
                             .setNegativeButton("No", null)
@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
                                     (dialog, which) -> showScreen(R.layout.pantalla_horarios_servicio))
                             .show());
             findViewById(R.id.action_schedule_save).setOnClickListener(v ->
-                    new MaterialAlertDialogBuilder(this)
+                    createLightDialogBuilder()
                             .setTitle("Guardar horario base")
                             .setMessage("¿Deseas guardar esta configuración como horario base?")
                             .setNegativeButton("No", null)
@@ -726,7 +726,7 @@ public class MainActivity extends AppCompatActivity {
         item.findViewById(R.id.action_edit_specialty).setOnClickListener(v ->
                 showSpecialtyForm());
         item.findViewById(R.id.action_delete_specialty).setOnClickListener(v ->
-                new MaterialAlertDialogBuilder(this)
+                createLightDialogBuilder()
                         .setTitle("Eliminar especialidad")
                         .setMessage("¿Deseas eliminar esta especialidad?")
                         .setNegativeButton("Cancelar", null)
@@ -763,7 +763,7 @@ public class MainActivity extends AppCompatActivity {
         ((android.widget.TextView) item.findViewById(R.id.benefit_cost)).setText("Costo    " + points);
         item.findViewById(R.id.action_edit_benefit).setOnClickListener(v -> showBenefitForm());
         item.findViewById(R.id.action_delete_benefit).setOnClickListener(v ->
-                new MaterialAlertDialogBuilder(this)
+                createLightDialogBuilder()
                         .setTitle("Eliminar beneficio")
                         .setMessage("¿Deseas eliminar este beneficio?")
                         .setNegativeButton("Cancelar", null)
@@ -1072,7 +1072,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showPromotionForm() {
-        View content = getLayoutInflater().inflate(R.layout.modal_admin_promotion, null);
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_promotion, null);
         SwitchMaterial notificationSwitch =
                 content.findViewById(R.id.modal_promotion_notification_switch);
         View notificationSection =
@@ -1082,7 +1084,7 @@ public class MainActivity extends AppCompatActivity {
         Spinner typeSpinner = content.findViewById(R.id.modal_promotion_type);
         TextView valueLabel = content.findViewById(R.id.modal_promotion_value_label);
 
-        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(this,
+        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(modalContext,
                 android.R.layout.simple_spinner_dropdown_item,
                 new String[]{"Descuento", "Catálogo"});
         typeSpinner.setAdapter(typeAdapter);
@@ -1105,7 +1107,7 @@ public class MainActivity extends AppCompatActivity {
                     isChecked ? "#D5A916" : "#8C8C8C"));
         });
 
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
                 .setView(content)
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Guardar", null)
@@ -1151,7 +1153,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showRedeemConfirmation() {
-        new MaterialAlertDialogBuilder(this)
+        createLightDialogBuilder()
                 .setTitle("Confirmar consumo")
                 .setMessage("¿Deseas confirmar el consumo de este beneficio?\n\nSe descontarán los puntos correspondientes al cliente.")
                 .setNegativeButton("Cancelar", null)
@@ -1160,7 +1162,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showDeleteBenefitConfirmation() {
-        new MaterialAlertDialogBuilder(this)
+        createLightDialogBuilder()
                 .setTitle("Eliminar beneficio")
                 .setMessage("¿Deseas eliminar este beneficio de la lista disponible?")
                 .setNegativeButton("Cancelar", null)
@@ -1170,12 +1172,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void showStandardForm(String title, String positiveText,
             String[] labels, String[] values) {
-        View content = getLayoutInflater().inflate(R.layout.modal_admin_standard, null);
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_standard, null);
         TextView titleView = content.findViewById(R.id.modal_admin_title);
         LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
         titleView.setText(title);
         for (int i = 0; i < labels.length; i++) {
-            EditText field = new EditText(this);
+            EditText field = new EditText(modalContext);
             field.setHint(labels[i]);
             if (values != null && i < values.length && values[i] != null
                     && !values[i].isEmpty()) {
@@ -1189,7 +1193,7 @@ public class MainActivity extends AppCompatActivity {
             params.topMargin = dp(8);
             fields.addView(field, params);
         }
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
                 .setView(content)
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton(positiveText, null)
@@ -1205,6 +1209,14 @@ public class MainActivity extends AppCompatActivity {
                     .setBackgroundColor(android.graphics.Color.parseColor("#C51B20"));
         });
         dialog.show();
+    }
+
+    private android.content.Context createLightModalContext() {
+        return new android.view.ContextThemeWrapper(this, R.style.Theme_AdminModalLight);
+    }
+
+    private MaterialAlertDialogBuilder createLightDialogBuilder() {
+        return new MaterialAlertDialogBuilder(createLightModalContext());
     }
 
     private int dp(int value) {

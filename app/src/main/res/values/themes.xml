@@ -13,4 +13,5 @@
 
     <style name="Theme.Proyect_BS" parent="Base.Theme.Proyect_BS" />
 
+    <style name="Theme_AdminModalLight" parent="Theme.Material3.Light.Dialog.Alert" />
 </resources>
