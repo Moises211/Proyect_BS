@@ -1,0 +1,9 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:padding="4dp">
+    <TextView android:id="@+id/general_field_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Campo" android:textColor="#263248" android:textSize="16sp" />
+    <EditText android:id="@+id/general_field_input" android:layout_width="match_parent" android:layout_height="42dp" android:layout_marginTop="5dp" android:background="@drawable/bg_general_field_light" android:hint="Valor" android:paddingStart="12dp" android:paddingEnd="12dp" android:textColor="#333333" android:textColorHint="#A4A7B2" android:textSize="16sp" />
+</LinearLayout>

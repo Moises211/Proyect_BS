@@ -5,7 +5,7 @@
         <item name="adminSearchTextColor">#333333</item>
         <item name="adminSearchHintColor">#757575</item>
         <item name="adminSearchIconColor">#464646</item>
-        <item name="android:fontFamily">sans</item>
+        <item name="android:fontFamily">sans-serif</item>
         <item name="android:statusBarColor">#C51B20</item>
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowLightStatusBar">false</item>
@@ -14,4 +14,21 @@
     <style name="Theme.Proyect_BS" parent="Base.Theme.Proyect_BS" />
 
     <style name="Theme_AdminModalLight" parent="Theme.Material3.Light.Dialog.Alert" />
+
+    <style name="Theme_GeneralidadesLight" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:statusBarColor">#C51B20</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:colorAccent">#287F8D</item>
+    </style>
+
+    <style name="Theme_GeneralidadesDark" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:statusBarColor">#C51B20</item>
+        <item name="android:navigationBarColor">#1A1D21</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:colorAccent">#48B2C7</item>
+    </style>
 </resources>

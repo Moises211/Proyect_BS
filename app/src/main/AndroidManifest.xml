@@ -13,6 +13,10 @@
         android:theme="@style/Theme.Proyect_BS">
         <activity
             android:name=".MainActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".GeneralidadesActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

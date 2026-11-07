@@ -1,6 +1,7 @@
 package ues.edu.sv.proyect_bs;
 
 import android.os.Bundle;
+import android.net.Uri;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ArrayAdapter;
@@ -12,6 +13,8 @@ import android.view.ViewGroup;
 import android.widget.CompoundButton;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -23,296 +26,131 @@ import com.google.android.material.textfield.TextInputEditText;
 
 public class MainActivity extends AppCompatActivity {
     private java.util.Calendar selectedWeekStart;
-    private int selectedMenuItemId = R.id.menu_admin_home;
-    private boolean syncingBottomNavigation;
-    private int currentLayout = R.layout.pantalla_inicial;
     private boolean darkMode;
+    private final AdminNavigationController navigationController =
+            new AdminNavigationController(this);
+    private ImageView promotionImageTarget;
+    private final ActivityResultLauncher<String> promotionImagePicker =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri != null && promotionImageTarget != null) {
+                    promotionImageTarget.setImageURI(uri);
+                    promotionImageTarget.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    promotionImageTarget.setPadding(0, 0, 0, 0);
+                    promotionImageTarget.setColorFilter(null);
+                    promotionImageTarget.setContentDescription("Imagen promocional seleccionada");
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        darkMode = getPreferences(MODE_PRIVATE).getBoolean("dark_mode", false);
-        setContentView(R.layout.pantalla_inicial);
-        configureNavigation();
-        syncBottomNavigation(R.layout.pantalla_inicial);
-        configureHome();
+        darkMode = getSharedPreferences("app_preferences", MODE_PRIVATE)
+                .getBoolean("dark_mode", false);
+        showScreen(R.layout.pantalla_inicial);
+    }
+
+    void showScreen(int layout) {
+        navigationController.navigateTo(layout);
+    }
+
+    AdminNavigationController getNavigationController() {
+        return navigationController;
+    }
+
+    void configureManagementScreen(int layout) {
+        createViewController(layout).configure();
         applyDarkModeToCurrentScreen();
     }
 
-    private void configureHome() {
-        configureMenuToolbar(R.id.admin_top_app_bar);
-        findViewById(R.id.module_cuts_services).setOnClickListener(v ->
-                showScreen(R.layout.pantalla_cortes_servicios));
-        findViewById(R.id.module_client_control).setOnClickListener(v ->
-                showScreen(R.layout.pantalla_control_citas));
-        findViewById(R.id.module_user_profile).setOnClickListener(v ->
-                showScreen(R.layout.pantalla_perfil_usuario));
-        findViewById(R.id.module_staff_shifts).setOnClickListener(v ->
-                showScreen(R.layout.pantalla_personal_turnos));
-    }
-
-    private void showScreen(int layout) {
-        currentLayout = layout;
-        selectedMenuItemId = getMenuItemForLayout(layout);
-        setContentView(layout);
-        syncBottomNavigation(layout);
-        configureNavigation();
-
+    private AdminViewController createViewController(int layout) {
         if (layout == R.layout.pantalla_inicial) {
-            configureHome();
-        } else if (layout == R.layout.pantalla_control_citas) {
-            configureMenuToolbar(R.id.toolbar_control_citas);
-            findViewById(R.id.card_client_directory).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_clientes));
-            findViewById(R.id.card_benefits).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_beneficios));
-        } else if (layout == R.layout.pantalla_personal_turnos) {
-            configureMenuToolbar(R.id.toolbar_personal_turnos);
-            findViewById(R.id.card_staff_barbers).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_barberos));
-            findViewById(R.id.card_staff_schedule).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_cronograma_barberos));
-            findViewById(R.id.card_staff_specialties).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_especialidades));
-        } else if (layout == R.layout.pantalla_cortes_servicios) {
-            MaterialToolbar toolbar = findViewById(R.id.toolbar_admin_menu);
-            toolbar.setSubtitle("Cortes y Servicios");
-            configureMenuToolbar(R.id.toolbar_admin_menu);
-            findViewById(R.id.card_admin_services).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_administracion_servicios));
-            findViewById(R.id.card_service_hours).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_horarios_servicio));
-            findViewById(R.id.card_promotions).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_promociones));
-            findViewById(R.id.card_admin_benefits).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_beneficios_admin));
-        } else if (layout == R.layout.pantalla_administracion_servicios) {
-            findViewById(R.id.toolbar_services).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_cortes_servicios));
-            findViewById(R.id.action_add_service).setOnClickListener(v -> showServiceForm());
-            configureSpinner(R.id.service_status_spinner, android.graphics.Color.DKGRAY,
-                    "Todos", "Activos", "Inactivos");
-            configureServiceActions(R.id.service_item_one);
-            configureServiceActions(R.id.service_item_two);
-            configureServiceActions(R.id.service_item_three);
-            setDisabledCard(R.id.service_item_three, R.id.service_active_switch);
-        } else if (layout == R.layout.pantalla_horarios_servicio) {
-            findViewById(R.id.toolbar_service_hours).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_cortes_servicios));
-            findViewById(R.id.action_previous_week).setOnClickListener(v ->
-                    showWeekChangeDialog(-1));
-            findViewById(R.id.action_select_week).setOnClickListener(v ->
-                    showWeekCalendar());
-            findViewById(R.id.week_days_summary).setOnClickListener(v ->
-                    showWeekCalendar());
-            findViewById(R.id.action_next_week).setOnClickListener(v ->
-                    showWeekChangeDialog(1));
-            findViewById(R.id.action_service_shifts).setOnClickListener(v ->
-                    showBaseShiftForm());
-            findViewById(R.id.action_base_schedule).setOnClickListener(v ->
-                    showBaseScheduleForm());
-            configureDailyShiftActions(R.id.service_daily_shift_one);
-            configureDailyShiftActions(R.id.service_daily_shift_two);
-            configureDailyShiftActions(R.id.service_daily_shift_three);
-            configureDailyShiftActions(R.id.service_daily_shift_four);
-            configureDailyShiftActions(R.id.service_daily_shift_five);
-            configureDailyShiftActions(R.id.service_daily_shift_six);
-            setDisabledCard(R.id.service_daily_shift_two, R.id.daily_shift_active);
-        } else if (layout == R.layout.pantalla_configuracion_horario_base) {
-            findViewById(R.id.toolbar_base_schedule).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_horarios_servicio));
-            findViewById(R.id.action_base_schedule_cancel).setOnClickListener(v ->
-                    createLightDialogBuilder()
-                            .setTitle("Cancelar configuración")
-                            .setMessage("¿Deseas cancelar la configuración del horario base?")
-                            .setNegativeButton("No", null)
-                            .setPositiveButton("Sí, cancelar",
-                                    (dialog, which) -> showScreen(R.layout.pantalla_horarios_servicio))
-                            .show());
-            findViewById(R.id.action_schedule_save).setOnClickListener(v ->
-                    createLightDialogBuilder()
-                            .setTitle("Guardar horario base")
-                            .setMessage("¿Deseas guardar esta configuración como horario base?")
-                            .setNegativeButton("No", null)
-                            .setPositiveButton("Guardar", null)
-                            .show());
-            configureBaseScheduleDay(R.id.base_day_one, "Lunes", "L",
-                    "9:00 a.m. - 7:00 p.m.", "11:00 a.m. - 12:00 p.m.");
-            configureBaseScheduleDay(R.id.base_day_two, "Martes", "M",
-                    "Día de Descanso", "Sin Receso");
-            configureBaseScheduleDay(R.id.base_day_three, "Miércoles", "X",
-                    "9:00 a.m. - 7:00 p.m.", "Sin Receso");
-            configureBaseScheduleDay(R.id.base_day_four, "Jueves", "J",
-                    "9:00 a.m. - 7:00 p.m.", "11:00 a.m. - 12:00 p.m.");
-            configureBaseScheduleDay(R.id.base_day_five, "Viernes", "V",
-                    "9:00 a.m. - 7:00 p.m.", "11:00 a.m. - 12:00 p.m.");
-            configureBaseScheduleDay(R.id.base_day_six, "Sábado", "S",
-                    "9:00 a.m. - 7:00 p.m.", "Sin Receso");
-            configureBaseScheduleDay(R.id.base_day_seven, "Domingo", "D",
-                    "9:00 a.m. - 7:00 p.m.", "Sin Receso");
-            setDisabledCard(R.id.base_day_two, R.id.daily_shift_active);
-        } else if (layout == R.layout.pantalla_promociones) {
-            findViewById(R.id.toolbar_promotions).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_cortes_servicios));
-            configureSpinner(R.id.promotion_status_spinner, android.graphics.Color.WHITE,
-                    "Todas", "Activas", "Inactivas");
-            findViewById(R.id.action_add_promotion).setOnClickListener(v ->
-                    showPromotionForm());
-            configurePromotionActions(R.id.promotion_item_one, "Especial Mes del Padre",
-                    "Catálogo", "Combo Papá e Hijo", true);
-            configurePromotionActions(R.id.promotion_item_two, "Descuento Corte Fo...",
-                    "Descuento", "10% en cortes", true);
-            configurePromotionActions(R.id.promotion_item_three, "Descuento Corte Fo...",
-                    "Descuento", "15% en cortes", false);
-            setDisabledCard(R.id.promotion_item_three, R.id.promotion_active_switch);
-        } else if (layout == R.layout.pantalla_beneficios_admin) {
-            findViewById(R.id.toolbar_admin_benefits).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_cortes_servicios));
-            configureSpinner(R.id.admin_benefit_status_spinner, android.graphics.Color.WHITE,
-                    "Todas", "Activas", "Inactivas");
-            findViewById(R.id.action_edit_base_rate).setOnClickListener(v ->
-                    showBaseRateForm());
-            findViewById(R.id.action_add_admin_benefit).setOnClickListener(v ->
-                    showBenefitForm());
-            configureAdminBenefit(R.id.admin_benefit_item_one, "Corte Clasico Barba", "45 Pts", true);
-            configureAdminBenefit(R.id.admin_benefit_item_two, "Tinte & Mascarill...", "65 Pts", true);
-            configureAdminBenefit(R.id.admin_benefit_item_three, "Combo VIP (Corte...", "70 Pts", false);
-            setDisabledCard(R.id.admin_benefit_item_three, R.id.admin_benefit_active_switch);
-            View disabledBenefit = findViewById(R.id.admin_benefit_item_three);
-            android.widget.ImageView disabledBenefitIcon =
-                    disabledBenefit.findViewById(R.id.benefit_icon);
-            disabledBenefitIcon.setBackgroundResource(R.drawable.bg_benefit_avatar_disabled);
-            disabledBenefitIcon.setImageTintList(android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.rgb(170, 170, 170)));
-        } else if (layout == R.layout.pantalla_barberos) {
-            MaterialToolbar toolbar = findViewById(R.id.toolbar_barbers);
-            toolbar.setNavigationOnClickListener(v ->
-                    showScreen(R.layout.pantalla_personal_turnos));
-            configureSpinner(R.id.barbers_status_spinner, android.graphics.Color.DKGRAY,
-                    "Todos", "Activos", "Inactivos");
-            findViewById(R.id.action_add_barber).setOnClickListener(v ->
-                    showBarberForm(false));
-            configureBarberActions(R.id.barber_item_one);
-            configureBarberActions(R.id.barber_item_two);
-            configureBarberActions(R.id.barber_item_three);
-            setDisabledCard(R.id.barber_item_two, R.id.barber_active_switch);
-        } else if (layout == R.layout.pantalla_cronograma_barberos) {
-            MaterialToolbar toolbar = findViewById(R.id.toolbar_schedule);
-            toolbar.setNavigationOnClickListener(v ->
-                    showScreen(R.layout.pantalla_personal_turnos));
-            configureSpinner(R.id.schedule_status_spinner, android.graphics.Color.DKGRAY,
-                    "Todos", "Activos", "Inactivos");
-            findViewById(R.id.schedule_barber_one).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_cronograma_barbero));
-            findViewById(R.id.schedule_barber_two).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_cronograma_barbero));
-            findViewById(R.id.schedule_barber_three).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_cronograma_barbero));
-            setDisabledCard(R.id.schedule_barber_two, -1);
-        } else if (layout == R.layout.pantalla_especialidades) {
-            MaterialToolbar toolbar = findViewById(R.id.toolbar_admin_back);
-            toolbar.setSubtitle("Administración Especialidades");
-            toolbar.setNavigationOnClickListener(v ->
-                    showScreen(R.layout.pantalla_personal_turnos));
-            findViewById(R.id.action_add_specialty).setOnClickListener(v ->
-                    showSpecialtyForm());
-            configureSpecialtyActions(R.id.specialty_item_one);
-            configureSpecialtyActions(R.id.specialty_item_two);
-            configureSpecialtyActions(R.id.specialty_item_three);
-        } else if (layout == R.layout.pantalla_cronograma_barbero) {
-            MaterialToolbar toolbar = findViewById(R.id.toolbar_personal_schedule);
-            toolbar.setNavigationOnClickListener(v ->
-                    showScreen(R.layout.pantalla_cronograma_barberos));
-            findViewById(R.id.action_base_shift).setOnClickListener(v ->
-                    showBaseShiftForm());
-            configureDailyShiftActions(R.id.daily_shift_one);
-            configureDailyShiftActions(R.id.daily_shift_two);
-            configureDailyShiftActions(R.id.daily_shift_three);
-            configureDailyShiftActions(R.id.daily_shift_four);
-            setDisabledCard(R.id.daily_shift_two, R.id.daily_shift_active);
-        } else if (layout == R.layout.pantalla_clientes) {
-            findViewById(R.id.toolbar_admin_back).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_control_citas));
-            findViewById(R.id.action_add_client).setOnClickListener(v ->
-                    showClientForm(false));
-            configureSpinner(R.id.dropdown_client_status, android.graphics.Color.DKGRAY,
-                    "Todos", "Activos", "Inactivos");
-            configureClientActions(R.id.client_item_one);
-            configureClientActions(R.id.client_item_two);
-            configureClientActions(R.id.client_item_three);
-        } else if (layout == R.layout.pantalla_citas_cliente) {
-            findViewById(R.id.toolbar_admin_back).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_clientes));
-            findViewById(R.id.filter_active_appointments).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_citas_cliente));
-            findViewById(R.id.filter_history_appointments).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_historial_citas_cliente));
-            findViewById(R.id.action_change_appointment).setOnClickListener(v ->
-                    showAppointmentForm());
-        } else if (layout == R.layout.pantalla_historial_citas_cliente) {
-            MaterialToolbar toolbar = findViewById(R.id.toolbar_history_appointments);
-            toolbar.setNavigationOnClickListener(v ->
-                    showScreen(R.layout.pantalla_citas_cliente));
-            configureSpinner(R.id.history_all_dropdown, android.graphics.Color.DKGRAY,
-                    "Todas", "Activas", "Canceladas");
-        } else if (layout == R.layout.pantalla_citas) {
-            findViewById(R.id.toolbar_admin_back).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_control_citas));
-            findViewById(R.id.action_add_appointment).setOnClickListener(v ->
-                    showAppointmentForm());
-            configureSpinner(R.id.dropdown_appointment_status, android.graphics.Color.DKGRAY,
-                    "Historial", "Activas", "Canceladas");
-            findViewById(R.id.appointment_item_one).setOnClickListener(v ->
-                    showAppointmentForm());
-        } else if (layout == R.layout.pantalla_beneficios) {
-            findViewById(R.id.toolbar_admin_back).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_control_citas));
-            findViewById(R.id.benefit_client_one).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_beneficios_cliente));
-            findViewById(R.id.benefit_client_two).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_beneficios_cliente));
-            findViewById(R.id.benefit_client_three).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_beneficios_cliente));
-        } else if (layout == R.layout.pantalla_beneficios_cliente) {
-            findViewById(R.id.toolbar_benefits_client).setOnClickListener(v ->
-                    showScreen(R.layout.pantalla_beneficios));
-            configureSpinner(R.id.dropdown_benefit_status, android.graphics.Color.WHITE,
-                    "Todas", "Activas", "Canjeadas");
-            configureBenefitActions(R.id.benefit_available_one);
-            configureBenefitActions(R.id.benefit_available_two);
-        } else if (layout == R.layout.pantalla_perfil_usuario) {
-            configureMenuToolbar(R.id.toolbar_profile);
-            findViewById(R.id.action_edit_profile).setOnClickListener(v ->
-                    showProfileForm());
-            findViewById(R.id.action_change_password).setOnClickListener(v ->
-                    showPasswordForm());
-            configureSpinner(R.id.profile_language_spinner, android.graphics.Color.WHITE,
-                    "Español", "English");
-            SwitchMaterial themeSwitch = findViewById(R.id.profile_theme_switch);
-            TextView themeLabel = findViewById(R.id.profile_theme_label);
-            themeSwitch.setChecked(darkMode);
-            themeLabel.setText(darkMode
-                    ? "Modo Oscuro\nAlternar Contraste de la interfaz"
-                    : "Modo Claro\nAlternar Contraste de la interfaz");
-            themeSwitch.setOnCheckedChangeListener((buttonView, checked) -> {
-                darkMode = checked;
-                getPreferences(MODE_PRIVATE).edit()
-                        .putBoolean("dark_mode", darkMode)
-                        .apply();
-                showScreen(currentLayout);
-            });
+            return new PantallaInicialController(this);
         }
-        applyDarkModeToCurrentScreen();
+        if (layout == R.layout.pantalla_control_citas) {
+            return new ControlCitasController(this);
+        }
+        if (layout == R.layout.pantalla_clientes) {
+            return new ClientesController(this);
+        }
+        if (layout == R.layout.pantalla_citas_cliente) {
+            return new CitasClienteController(this);
+        }
+        if (layout == R.layout.pantalla_historial_citas_cliente) {
+            return new HistorialCitasClienteController(this);
+        }
+        if (layout == R.layout.pantalla_citas) {
+            return new CitasController(this);
+        }
+        if (layout == R.layout.pantalla_beneficios) {
+            return new BeneficiosController(this);
+        }
+        if (layout == R.layout.pantalla_beneficios_cliente) {
+            return new BeneficiosClienteController(this);
+        }
+        if (layout == R.layout.pantalla_personal_turnos) {
+            return new PersonalTurnosController(this);
+        }
+        if (layout == R.layout.pantalla_barberos) {
+            return new BarberosController(this);
+        }
+        if (layout == R.layout.pantalla_cronograma_barberos) {
+            return new CronogramaBarberosController(this);
+        }
+        if (layout == R.layout.pantalla_especialidades) {
+            return new EspecialidadesController(this);
+        }
+        if (layout == R.layout.pantalla_cronograma_barbero) {
+            return new CronogramaBarberoController(this);
+        }
+        if (layout == R.layout.pantalla_cortes_servicios) {
+            return new CortesServiciosController(this);
+        }
+        if (layout == R.layout.pantalla_administracion_servicios) {
+            return new AdministracionServiciosController(this);
+        }
+        if (layout == R.layout.pantalla_horarios_servicio) {
+            return new HorariosServicioController(this);
+        }
+        if (layout == R.layout.pantalla_configuracion_horario_base) {
+            return new ConfiguracionHorarioBaseController(this);
+        }
+        if (layout == R.layout.pantalla_promociones) {
+            return new PromocionesController(this);
+        }
+        if (layout == R.layout.pantalla_beneficios_admin) {
+            return new BeneficiosAdminController(this);
+        }
+        if (layout == R.layout.pantalla_perfil_usuario) {
+            return new PerfilUsuarioController(this);
+        }
+        throw new IllegalArgumentException("Layout administrativo no registrado: " + layout);
     }
 
-    private void applyDarkModeToCurrentScreen() {
+    void setDarkMode(boolean enabled) {
+        darkMode = enabled;
+        getSharedPreferences("app_preferences", MODE_PRIVATE).edit()
+                .putBoolean("dark_mode", darkMode)
+                .apply();
+        showScreen(navigationController.getCurrentLayout());
+    }
+
+    void openGeneralidades() {
+        startActivity(new android.content.Intent(this, GeneralidadesActivity.class));
+        finish();
+    }
+
+    void applyDarkModeToCurrentScreen() {
         View root = findViewById(android.R.id.content);
         if (root != null) {
             applyDarkModeToView(root);
         }
     }
 
-    private void applyDarkModeToView(View view) {
+    boolean isDarkMode() {
+        return darkMode;
+    }
+
+    void applyDarkModeToView(View view) {
         int darkSurface = android.graphics.Color.rgb(40, 40, 44);
         View contentRoot = findViewById(android.R.id.content);
         if (view.getId() == android.R.id.content
@@ -537,166 +375,7 @@ public class MainActivity extends AppCompatActivity {
                 || id == R.id.action_remove_benefit;
     }
 
-    private void configureMenuToolbar(int toolbarId) {
-        View toolbarView = findViewById(toolbarId);
-        if (toolbarView instanceof MaterialToolbar) {
-            ((MaterialToolbar) toolbarView).setNavigationOnClickListener(this::showAdminMenu);
-        }
-    }
-
-    private void showAdminMenu(View anchor) {
-        final android.app.Dialog dialog = new android.app.Dialog(this);
-        dialog.setContentView(R.layout.admin_side_menu);
-        dialog.show();
-        applyMenuSelection(dialog.findViewById(android.R.id.content));
-        android.view.Window window = dialog.getWindow();
-        if (window != null) {
-            window.setBackgroundDrawableResource(android.R.color.transparent);
-            window.setDimAmount(0.35f);
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            window.setGravity(android.view.Gravity.START);
-            window.setLayout(
-                    (int) (getResources().getDisplayMetrics().widthPixels * 0.94f),
-                    android.view.WindowManager.LayoutParams.MATCH_PARENT);
-        }
-        View menuRoot = dialog.findViewById(android.R.id.content);
-        if (darkMode && menuRoot != null) {
-            menuRoot.setBackgroundColor(android.graphics.Color.rgb(18, 19, 21));
-            applyDarkModeToView(menuRoot);
-            applyMenuSelection(menuRoot);
-        }
-        View home = dialog.findViewById(R.id.menu_admin_home);
-        View clients = dialog.findViewById(R.id.menu_admin_clients);
-        View staff = dialog.findViewById(R.id.menu_admin_staff);
-        View services = dialog.findViewById(R.id.menu_admin_services);
-        View profile = dialog.findViewById(R.id.menu_admin_profile);
-        View logout = dialog.findViewById(R.id.menu_admin_logout);
-        if (home != null) {
-            home.setOnClickListener(v -> {
-                dialog.dismiss();
-                showScreen(R.layout.pantalla_inicial);
-            });
-        }
-        if (clients != null) {
-            clients.setOnClickListener(v -> {
-                dialog.dismiss();
-                showScreen(R.layout.pantalla_control_citas);
-            });
-        }
-        if (staff != null) {
-            staff.setOnClickListener(v -> {
-                dialog.dismiss();
-                showScreen(R.layout.pantalla_personal_turnos);
-            });
-        }
-        if (services != null) {
-            services.setOnClickListener(v -> {
-                dialog.dismiss();
-                showScreen(R.layout.pantalla_cortes_servicios);
-            });
-        }
-        if (profile != null) {
-            profile.setOnClickListener(v -> {
-                dialog.dismiss();
-                showScreen(R.layout.pantalla_perfil_usuario);
-            });
-        }
-        if (logout != null) {
-            logout.setOnClickListener(v -> dialog.dismiss());
-        }
-    }
-
-    private int getMenuItemForLayout(int layout) {
-        if (layout == R.layout.pantalla_control_citas
-                || layout == R.layout.pantalla_clientes
-                || layout == R.layout.pantalla_citas
-                || layout == R.layout.pantalla_beneficios
-                || layout == R.layout.pantalla_citas_cliente
-                || layout == R.layout.pantalla_historial_citas_cliente
-                || layout == R.layout.pantalla_beneficios_cliente) {
-            return R.id.menu_admin_clients;
-        }
-        if (layout == R.layout.pantalla_personal_turnos
-                || layout == R.layout.pantalla_barberos
-                || layout == R.layout.pantalla_cronograma_barberos
-                || layout == R.layout.pantalla_cronograma_barbero
-                || layout == R.layout.pantalla_especialidades) {
-            return R.id.menu_admin_staff;
-        }
-        if (layout == R.layout.pantalla_cortes_servicios
-                || layout == R.layout.pantalla_administracion_servicios
-                || layout == R.layout.pantalla_horarios_servicio
-                || layout == R.layout.pantalla_configuracion_horario_base
-                || layout == R.layout.pantalla_promociones
-                || layout == R.layout.pantalla_beneficios_admin) {
-            return R.id.menu_admin_services;
-        }
-        if (layout == R.layout.pantalla_perfil_usuario) {
-            return R.id.menu_admin_profile;
-        }
-        return R.id.menu_admin_home;
-    }
-
-    private void applyMenuSelection(View menuRoot) {
-        int[] menuIds = {
-                R.id.menu_admin_home, R.id.menu_admin_services, R.id.menu_admin_staff,
-                R.id.menu_admin_clients, R.id.menu_admin_profile
-        };
-        for (int menuId : menuIds) {
-            View item = menuRoot.findViewById(menuId);
-            if (item == null) {
-                continue;
-            }
-            boolean selected = menuId == selectedMenuItemId;
-            item.setBackgroundResource(selected
-                    ? R.drawable.bg_menu_selected
-                    : (darkMode ? R.drawable.bg_menu_item_dark : R.drawable.bg_menu_item));
-            ImageView icon = findMenuIcon(item);
-            if (icon != null) {
-                icon.setImageTintList(android.content.res.ColorStateList.valueOf(
-                        android.graphics.Color.parseColor(selected ? "#C51B20" : "#197A8A")));
-            }
-            TextView title = findFirstMenuText(item);
-            if (title != null) {
-                title.setTextColor(android.graphics.Color.parseColor(
-                        selected ? "#C51B20" : (darkMode ? "#F4F4F4" : "#242424")));
-            }
-        }
-    }
-
-    private ImageView findMenuIcon(View view) {
-        if (view instanceof ImageView) {
-            return (ImageView) view;
-        }
-        if (view instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) view;
-            for (int index = 0; index < group.getChildCount(); index++) {
-                ImageView icon = findMenuIcon(group.getChildAt(index));
-                if (icon != null) {
-                    return icon;
-                }
-            }
-        }
-        return null;
-    }
-
-    private TextView findFirstMenuText(View view) {
-        if (view instanceof TextView && !(view instanceof ImageView)) {
-            return (TextView) view;
-        }
-        if (view instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) view;
-            for (int index = 0; index < group.getChildCount(); index++) {
-                TextView text = findFirstMenuText(group.getChildAt(index));
-                if (text != null) {
-                    return text;
-                }
-            }
-        }
-        return null;
-    }
-
-    private void configureClientActions(int itemId) {
+    void configureClientActions(int itemId) {
             View item = findViewById(itemId);
             item.setClickable(false);
             item.findViewById(R.id.action_edit_client).setOnClickListener(v ->
@@ -705,7 +384,7 @@ public class MainActivity extends AppCompatActivity {
                     showScreen(R.layout.pantalla_citas_cliente));
         }
 
-    private void configureBenefitActions(int itemId) {
+    void configureBenefitActions(int itemId) {
         View item = findViewById(itemId);
         item.setClickable(false);
         item.setFocusable(false);
@@ -715,31 +394,31 @@ public class MainActivity extends AppCompatActivity {
                 showDeleteBenefitConfirmation());
     }
 
-    private void configureBarberActions(int itemId) {
+    void configureBarberActions(int itemId) {
         View item = findViewById(itemId);
         item.findViewById(R.id.action_edit_barber).setOnClickListener(v ->
                 showBarberForm(true));
     }
 
-    private void configureSpecialtyActions(int itemId) {
+    void configureSpecialtyActions(int itemId) {
         View item = findViewById(itemId);
         item.findViewById(R.id.action_edit_specialty).setOnClickListener(v ->
                 showSpecialtyForm());
         item.findViewById(R.id.action_delete_specialty).setOnClickListener(v ->
                 createLightDialogBuilder()
                         .setTitle("Eliminar especialidad")
-                        .setMessage("¿Deseas eliminar esta especialidad?")
+                        .setMessage("Â¿Deseas eliminar esta especialidad?")
                         .setNegativeButton("Cancelar", null)
                         .setPositiveButton("Eliminar", null)
                         .show());
     }
 
-    private void configureServiceActions(int itemId) {
+    void configureServiceActions(int itemId) {
         View item = findViewById(itemId);
         item.findViewById(R.id.action_edit_service).setOnClickListener(v -> showServiceForm());
     }
 
-    private void configurePromotionActions(int itemId, String title, String type,
+    void configurePromotionActions(int itemId, String title, String type,
                                            String catalog, boolean notificationsEnabled) {
         View item = findViewById(itemId);
         ((android.widget.TextView) item.findViewById(R.id.promotion_title)).setText(title);
@@ -757,7 +436,7 @@ public class MainActivity extends AppCompatActivity {
                 showPromotionForm());
     }
 
-    private void configureAdminBenefit(int itemId, String title, String points, boolean active) {
+    void configureAdminBenefit(int itemId, String title, String points, boolean active) {
         View item = findViewById(itemId);
         ((android.widget.TextView) item.findViewById(R.id.benefit_title)).setText(title);
         ((android.widget.TextView) item.findViewById(R.id.benefit_cost)).setText("Costo    " + points);
@@ -765,20 +444,20 @@ public class MainActivity extends AppCompatActivity {
         item.findViewById(R.id.action_delete_benefit).setOnClickListener(v ->
                 createLightDialogBuilder()
                         .setTitle("Eliminar beneficio")
-                        .setMessage("¿Deseas eliminar este beneficio?")
+                        .setMessage("Â¿Deseas eliminar este beneficio?")
                         .setNegativeButton("Cancelar", null)
                         .setPositiveButton("Eliminar", null)
                         .show());
         ((CompoundButton) item.findViewById(R.id.admin_benefit_active_switch)).setChecked(active);
     }
 
-    private void showBaseRateForm() {
+    void showBaseRateForm() {
         showStandardForm("Modificar tarifa base", "Guardar",
-                new String[]{"Monto de gasto", "Define cuánto gasto representa un punto."},
+                new String[]{"Monto de gasto", "Define cuÃ¡nto gasto representa un punto."},
                 new String[]{"1.00", ""});
     }
 
-    private void setDisabledCard(int itemId, int switchId) {
+    void setDisabledCard(int itemId, int switchId) {
         View item = findViewById(itemId);
         if (item instanceof com.google.android.material.card.MaterialCardView) {
             ((com.google.android.material.card.MaterialCardView) item)
@@ -844,13 +523,13 @@ public class MainActivity extends AppCompatActivity {
                 || id == R.id.promotion_image;
     }
 
-    private void configureDailyShiftActions(int itemId) {
+    void configureDailyShiftActions(int itemId) {
         View item = findViewById(itemId);
         item.findViewById(R.id.action_edit_daily_shift).setOnClickListener(v ->
                 showDailyShiftForm());
     }
 
-    private void configureBaseScheduleDay(int itemId, String day, String initial,
+    void configureBaseScheduleDay(int itemId, String day, String initial,
                                           String hours, String breakTime) {
         View item = findViewById(itemId);
         ((android.widget.TextView) item.findViewById(R.id.base_day_name)).setText(day);
@@ -859,7 +538,7 @@ public class MainActivity extends AppCompatActivity {
         android.widget.TextView breakView = item.findViewById(R.id.base_day_break);
         hoursView.setText(hours);
         breakView.setText(breakTime);
-        if (hours.startsWith("Día")) {
+        if (hours.startsWith("DÃ­a")) {
             hoursView.setTextColor(android.graphics.Color.rgb(117, 117, 117));
             hoursView.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(
                     android.graphics.Color.rgb(117, 117, 117)));
@@ -873,7 +552,7 @@ public class MainActivity extends AppCompatActivity {
                 showDailyShiftForm());
     }
 
-    private void configureSpinner(int viewId, int textColor, String... options) {
+    void configureSpinner(int viewId, int textColor, String... options) {
         Spinner spinner = findViewById(viewId);
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(
                 this, android.R.layout.simple_spinner_item, options) {
@@ -906,7 +585,7 @@ public class MainActivity extends AppCompatActivity {
                 : R.layout.pantalla_historial_citas_cliente);
     }
 
-    private void showWeekChangeDialog(int direction) {
+    void showWeekChangeDialog(int direction) {
         if (selectedWeekStart == null) {
             selectedWeekStart = getWeekStart(java.util.Calendar.getInstance());
         }
@@ -914,16 +593,31 @@ public class MainActivity extends AppCompatActivity {
         updateWeekSelector();
     }
 
-    private void showWeekCalendar() {
+    void showWeekCalendar() {
         java.util.Calendar today = java.util.Calendar.getInstance();
-        new android.app.DatePickerDialog(this, (view, year, month, day) -> {
-            java.util.Calendar selectedDate = java.util.Calendar.getInstance();
-            selectedDate.set(year, month, day);
-            selectedWeekStart = getWeekStart(selectedDate);
-            updateWeekSelector();
-        }, today.get(java.util.Calendar.YEAR),
+        android.widget.DatePicker datePicker = new android.widget.DatePicker(this);
+        datePicker.init(
+                today.get(java.util.Calendar.YEAR),
                 today.get(java.util.Calendar.MONTH),
-                today.get(java.util.Calendar.DAY_OF_MONTH)).show();
+                today.get(java.util.Calendar.DAY_OF_MONTH),
+                null);
+
+        androidx.appcompat.app.AlertDialog picker = new MaterialAlertDialogBuilder(this)
+                .setTitle("Seleccionar semana")
+                .setView(datePicker)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Aceptar", (dialog, which) -> {
+                    java.util.Calendar selectedDate = java.util.Calendar.getInstance();
+                    selectedDate.set(
+                            datePicker.getYear(),
+                            datePicker.getMonth(),
+                            datePicker.getDayOfMonth());
+                    selectedWeekStart = getWeekStart(selectedDate);
+                    updateWeekSelector();
+                })
+                .create();
+        picker.setOnShowListener(dialog -> setPickerWindowWidth(picker));
+        picker.show();
     }
 
     private java.util.Calendar getWeekStart(java.util.Calendar date) {
@@ -953,100 +647,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-        private void configureNavigation() {
-        BottomNavigationView navigation = findViewById(R.id.admin_bottom_navigation);
-        navigation.setOnItemSelectedListener(item -> {
-            if (syncingBottomNavigation) {
-                return true;
-            }
-            if (item.getItemId() == R.id.nav_home) {
-                showScreen(R.layout.pantalla_inicial);
-            } else if (item.getItemId() == R.id.nav_cuts) {
-                showScreen(R.layout.pantalla_cortes_servicios);
-            } else if (item.getItemId() == R.id.nav_staff) {
-                showScreen(R.layout.pantalla_personal_turnos);
-            } else if (item.getItemId() == R.id.nav_clients) {
-                showScreen(R.layout.pantalla_control_citas);
-            } else if (item.getItemId() == R.id.nav_profile) {
-                showScreen(R.layout.pantalla_perfil_usuario);
-            } else {
-                return false;
-            }
-            return true;
-        });
-    }
-
-    private void syncBottomNavigation(int layout) {
-        BottomNavigationView navigation = findViewById(R.id.admin_bottom_navigation);
-        if (navigation == null) {
-            return;
-        }
-        int selectedId = getBottomNavigationItemForLayout(layout);
-        syncingBottomNavigation = true;
-        try {
-            navigation.getMenu().setGroupCheckable(0, true, true);
-            navigation.getMenu().findItem(selectedId).setChecked(true);
-            navigation.setItemActiveIndicatorEnabled(false);
-            navigation.setSelectedItemId(selectedId);
-            navigation.setItemActiveIndicatorEnabled(true);
-        } finally {
-            syncingBottomNavigation = false;
-        }
-    }
-
-    private int getBottomNavigationItemForLayout(int layout) {
-        if (layout == R.layout.pantalla_control_citas
-                || layout == R.layout.pantalla_clientes
-                || layout == R.layout.pantalla_citas
-                || layout == R.layout.pantalla_beneficios
-                || layout == R.layout.pantalla_citas_cliente
-                || layout == R.layout.pantalla_historial_citas_cliente
-                || layout == R.layout.pantalla_beneficios_cliente) {
-            return R.id.nav_clients;
-        }
-        if (layout == R.layout.pantalla_personal_turnos
-                || layout == R.layout.pantalla_barberos
-                || layout == R.layout.pantalla_cronograma_barberos
-                || layout == R.layout.pantalla_cronograma_barbero
-                || layout == R.layout.pantalla_especialidades) {
-            return R.id.nav_staff;
-        }
-        if (layout == R.layout.pantalla_cortes_servicios
-                || layout == R.layout.pantalla_administracion_servicios
-                || layout == R.layout.pantalla_horarios_servicio
-                || layout == R.layout.pantalla_configuracion_horario_base
-                || layout == R.layout.pantalla_promociones
-                || layout == R.layout.pantalla_beneficios_admin) {
-            return R.id.nav_cuts;
-        }
-        if (layout == R.layout.pantalla_perfil_usuario) {
-            return R.id.nav_profile;
-        }
-        return R.id.nav_home;
-    }
-
-    private void showClientForm(boolean editing) {
+    void showClientForm(boolean editing) {
         showStandardForm(editing ? "Datos del Cliente" : "Ingresar Nuevo Cliente", "Guardar",
                 new String[]{"Nombres", "Apellidos", "Tipo Documento", "Numero Doc.",
                         "Correo Electronico", "Numero Celular"},
-                new String[]{"Juan Carlos", "Canales", "DUI", "000000-0",
-                        "admin@gmail.com", "77223344"});
+                editing ? new String[]{"Juan Carlos", "Canales", "DUI", "000000-0",
+                        "admin@gmail.com", "77223344"} : null);
     }
 
-    private void showBarberForm(boolean editing) {
+    void showBarberForm(boolean editing) {
         showStandardForm(editing ? "Datos del Barbero" : "Ingresar Nuevo Barbero", "Guardar",
                 new String[]{"Nombres", "Apellidos", "Tipo Documento", "Numero Doc.",
-                        "Correo Electronico", "Numero Celular", "Contraseña", "Especialidad"},
-                new String[]{"Jose Carlos", "Canales", "DUI", "000000-0",
-                        "Example@ex...", "77223344", "**************", "Corte"});
+                        "Correo Electronico", "Numero Celular", "ContraseÃ±a", "Especialidad"},
+                editing ? new String[]{"Jose Carlos", "Canales", "DUI", "000000-0",
+                        "Example@ex...", "77223344", "**************", "Corte"} : null);
     }
 
-    private void showSpecialtyForm() {
+    void showSpecialtyForm() {
         showStandardForm("Ingresar Especialidad", "Guardar",
-                new String[]{"Especialidad"}, new String[]{"Corte"});
+                new String[]{"Especialidad"}, null);
     }
 
-    private void showBaseShiftForm() {
+    void showBaseShiftForm() {
         showStandardForm("Administracion Turnos Base", "Guardar",
                 new String[]{"Apertura", "Cierre", "Inicio Receso", "Fin Receso",
                         "Horario Apertura", "Horario Cierre"},
@@ -1061,17 +683,17 @@ public class MainActivity extends AppCompatActivity {
                         "11:00 a.m.", "12:00 p.m."});
     }
 
-    private void showServiceForm() {
+    void showServiceForm() {
         showStandardForm("Ingresar Nuevo Servicio", "Guardar Servicio",
-                new String[]{"Nombre del Servicio", "Precio ($)", "Duración (min)", "Categoría"},
-                new String[]{"Ej. Corte de Cabello", "12.00", "30", "Corte"});
+                new String[]{"Nombre del Servicio", "Precio ($)", "DuraciÃ³n (min)", "CategorÃ­a"},
+                null);
     }
 
-    private void showBaseScheduleForm() {
+    void showBaseScheduleForm() {
         showScreen(R.layout.pantalla_configuracion_horario_base);
     }
 
-    private void showPromotionForm() {
+    void showPromotionForm() {
         android.content.Context modalContext = createLightModalContext();
         View content = android.view.LayoutInflater.from(modalContext)
                 .inflate(R.layout.modal_admin_promotion, null);
@@ -1079,20 +701,57 @@ public class MainActivity extends AppCompatActivity {
                 content.findViewById(R.id.modal_promotion_notification_switch);
         View notificationSection =
                 content.findViewById(R.id.modal_promotion_notification_section);
+        View notificationFields =
+                content.findViewById(R.id.modal_promotion_notification_fields);
         ImageView notificationIcon =
                 content.findViewById(R.id.modal_promotion_notification_icon);
+        ImageView promotionImage = content.findViewById(R.id.modal_promotion_image);
+        View promotionImageContainer = content.findViewById(R.id.modal_promotion_image_container);
+        promotionImageTarget = promotionImage;
+        View.OnClickListener imagePickerClick = view -> promotionImagePicker.launch("image/*");
+        promotionImage.setOnClickListener(imagePickerClick);
+        promotionImageContainer.setOnClickListener(imagePickerClick);
         Spinner typeSpinner = content.findViewById(R.id.modal_promotion_type);
+        configureModalSpinnerAppearance(typeSpinner);
         TextView valueLabel = content.findViewById(R.id.modal_promotion_value_label);
+        android.widget.FrameLayout valueContainer =
+                content.findViewById(R.id.modal_promotion_value_container);
+        EditText valueInput = content.findViewById(R.id.modal_promotion_value);
+        EditText promotionStart = content.findViewById(R.id.modal_promotion_start);
+        EditText promotionEnd = content.findViewById(R.id.modal_promotion_end);
+        configureModalDateField(modalContext, promotionStart);
+        configureModalDateField(modalContext, promotionEnd);
 
-        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(modalContext,
-                android.R.layout.simple_spinner_dropdown_item,
-                new String[]{"Descuento", "Catálogo"});
+        ArrayAdapter<String> typeAdapter = createModalSpinnerAdapter(modalContext,
+                new String[]{"Descuento", "CatÃ¡logo"});
         typeSpinner.setAdapter(typeAdapter);
         typeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, View view,
                     int position, long id) {
-                valueLabel.setText(position == 0 ? "Porcentaje %" : "Catálogo");
+                    boolean catalog = position == 1;
+                    valueLabel.setText(catalog ? "CatÃ¡logo" : "Porcentaje %");
+                    if (catalog) {
+                        valueInput.setVisibility(View.GONE);
+                        for (int index = valueContainer.getChildCount() - 1; index > 0; index--) {
+                            valueContainer.removeViewAt(index);
+                        }
+                        Spinner serviceSpinner = new Spinner(modalContext);
+                        configureModalSpinnerAppearance(serviceSpinner);
+                        serviceSpinner.setAdapter(createModalSpinnerAdapter(modalContext,
+                                new String[]{"Seleccionar servicio", "Corte de Cabello",
+                                        "Combo Barba", "Corte y barba"}));
+                        serviceSpinner.setPrompt("Seleccione un servicio");
+                        serviceSpinner.setContentDescription("Selector de servicio");
+                        valueContainer.addView(serviceSpinner, new android.widget.FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT));
+                    } else {
+                        valueInput.setVisibility(View.VISIBLE);
+                        for (int index = valueContainer.getChildCount() - 1; index > 0; index--) {
+                            valueContainer.removeViewAt(index);
+                        }
+                    }
             }
 
             @Override
@@ -1100,12 +759,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         notificationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            notificationSection.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-            notificationIcon.setImageResource(isChecked
-                    ? R.drawable.ic_notifications : R.drawable.ic_notifications_off);
-            notificationIcon.setColorFilter(android.graphics.Color.parseColor(
-                    isChecked ? "#D5A916" : "#8C8C8C"));
+            applyPromotionNotificationState(notificationFields, notificationIcon, isChecked);
         });
+        applyPromotionNotificationState(notificationFields, notificationIcon,
+                notificationSwitch.isChecked());
 
         androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
                 .setView(content)
@@ -1125,13 +782,22 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void showBenefitForm() {
-        showStandardForm("Asignar Beneficio", "Guardar Servicio",
-                new String[]{"Categoría", "Selecciona Servicio", "Coste Pts"},
-                new String[]{"Corte", "Corte de Cabello", "25.00"});
+    private void applyPromotionNotificationState(View notificationFields,
+            ImageView notificationIcon, boolean enabled) {
+        notificationFields.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        notificationIcon.setImageResource(enabled
+                ? R.drawable.ic_notifications : R.drawable.ic_notifications_off);
+        notificationIcon.setColorFilter(android.graphics.Color.parseColor(
+                enabled ? "#D5A916" : "#8C8C8C"));
     }
 
-    private void showProfileForm() {
+    void showBenefitForm() {
+        showStandardForm("Asignar Beneficio", "Guardar Servicio",
+                new String[]{"CategorÃ­a", "Selecciona Servicio", "Coste Pts"},
+                null);
+    }
+
+    void showProfileForm() {
         showStandardForm("Juan Carlos Canales", "Guardar",
                 new String[]{"Nombres", "Apellidos", "Tipo Documento", "Numero Doc.",
                         "Correo Electronico", "Numero Celular"},
@@ -1139,23 +805,22 @@ public class MainActivity extends AppCompatActivity {
                         "admin@gmail.com", "77223344"});
     }
 
-    private void showPasswordForm() {
-        showStandardForm("Cambio Contraseña", "Guardar",
-                new String[]{"Contraseña Actual", "Nueva Contraseña"},
-                new String[]{"**************", "**************"});
+    void showPasswordForm() {
+        showStandardForm("Cambio ContraseÃ±a", "Guardar",
+                new String[]{"ContraseÃ±a Actual", "Nueva ContraseÃ±a"},
+                null);
     }
 
-    private void showAppointmentForm() {
+    void showAppointmentForm() {
         showStandardForm("Nueva cita", "Guardar",
-                new String[]{"Categoría Servicio", "Barbero", "Servicio", "Inicio", "Hora"},
-                new String[]{"Combo", "Jose Canales", "Combo Barba", "01/09/26",
-                        "12:30 p.m."});
+                new String[]{"CategorÃ­a Servicio", "Barbero", "Servicio", "Inicio", "Hora"},
+                null);
     }
 
     private void showRedeemConfirmation() {
         createLightDialogBuilder()
                 .setTitle("Confirmar consumo")
-                .setMessage("¿Deseas confirmar el consumo de este beneficio?\n\nSe descontarán los puntos correspondientes al cliente.")
+                .setMessage("Â¿Deseas confirmar el consumo de este beneficio?\n\nSe descontarÃ¡n los puntos correspondientes al cliente.")
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Confirmar", null)
                 .show();
@@ -1164,7 +829,7 @@ public class MainActivity extends AppCompatActivity {
     private void showDeleteBenefitConfirmation() {
         createLightDialogBuilder()
                 .setTitle("Eliminar beneficio")
-                .setMessage("¿Deseas eliminar este beneficio de la lista disponible?")
+                .setMessage("Â¿Deseas eliminar este beneficio de la lista disponible?")
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Eliminar", null)
                 .show();
@@ -1177,21 +842,24 @@ public class MainActivity extends AppCompatActivity {
                 .inflate(R.layout.modal_admin_standard, null);
         TextView titleView = content.findViewById(R.id.modal_admin_title);
         LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
+        boolean specialtyAsSelection = !title.equalsIgnoreCase("Ingresar Especialidad");
         titleView.setText(title);
         for (int i = 0; i < labels.length; i++) {
-            EditText field = new EditText(modalContext);
-            field.setHint(labels[i]);
-            if (values != null && i < values.length && values[i] != null
-                    && !values[i].isEmpty()) {
-                field.setText(values[i]);
-            }
-            field.setSingleLine(true);
-            field.setTextSize(16);
-            field.setBackgroundResource(R.drawable.bg_admin_modal_field);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            TextView label = new TextView(modalContext);
+            label.setText(labels[i]);
+            label.setTextColor(android.graphics.Color.parseColor("#263248"));
+            label.setTextSize(14);
+            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            labelParams.topMargin = dp(8);
+            fields.addView(label, labelParams);
+
+            String value = values != null && i < values.length ? values[i] : null;
+            View field = createModalField(
+                    modalContext, labels[i], value, specialtyAsSelection);
+            LinearLayout.LayoutParams fieldParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
-            params.topMargin = dp(8);
-            fields.addView(field, params);
+            fields.addView(field, fieldParams);
         }
         androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
                 .setView(content)
@@ -1211,11 +879,362 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private View createModalField(android.content.Context context, String label, String value,
+            boolean specialtyAsSelection) {
+        if (isModalSelection(label, specialtyAsSelection)) {
+            Spinner spinner = new Spinner(context);
+            configureModalSpinnerAppearance(spinner);
+            String[] values = getModalOptions(label);
+            String[] options = new String[values.length + 1];
+            options[0] = "Seleccionar " + label.toLowerCase(java.util.Locale.ROOT);
+            System.arraycopy(values, 0, options, 1, values.length);
+            ArrayAdapter<String> adapter = createModalSpinnerAdapter(context, options);
+            spinner.setAdapter(adapter);
+            spinner.setPrompt("Seleccione " + label.toLowerCase(java.util.Locale.ROOT));
+            spinner.setContentDescription("Selector de " + label.toLowerCase(java.util.Locale.ROOT));
+            spinner.setSelection(0);
+            if (value != null) {
+                for (int index = 0; index < values.length; index++) {
+                    if (values[index].equalsIgnoreCase(value)) {
+                        spinner.setSelection(index + 1);
+                        break;
+                    }
+                }
+            }
+            return spinner;
+        }
+
+        EditText field = new EditText(context);
+        field.setSingleLine(true);
+        field.setTextSize(16);
+        field.setHint(getModalHint(label));
+        field.setInputType(getModalInputType(label));
+        field.setBackgroundResource(R.drawable.bg_admin_modal_field);
+        if (isPasswordField(label)) {
+            configurePasswordField(field, context);
+        }
+        if (isDateField(label) || isTimeField(label)) {
+            field.setFocusable(false);
+            field.setClickable(true);
+            field.setOnClickListener(v -> {
+                if (isDateField(label)) {
+                    showModalDatePicker(context, field);
+                } else {
+                    showModalTimePicker(context, field);
+                }
+            });
+        }
+        if (value != null && !value.isEmpty()) {
+            field.setText(value);
+        }
+        return field;
+    }
+
+    private boolean isPasswordField(String label) {
+        return label.toLowerCase(java.util.Locale.ROOT).contains("contraseÃ±a");
+    }
+
+    private void configurePasswordField(EditText field, android.content.Context context) {
+        final boolean[] passwordVisible = {false};
+        field.setTransformationMethod(
+                android.text.method.PasswordTransformationMethod.getInstance());
+        field.setPadding(dp(12), 0, dp(44), 0);
+        updatePasswordVisibilityIcon(field, context, passwordVisible[0]);
+        field.setContentDescription("ContraseÃ±a oculta. Tocar el icono para mostrarla");
+        field.setOnTouchListener((view, event) -> {
+            boolean inVisibilityArea = event.getX() >= field.getWidth() - dp(60);
+            if (!inVisibilityArea) {
+                return false;
+            }
+            if (event.getAction() == android.view.MotionEvent.ACTION_UP) {
+                passwordVisible[0] = !passwordVisible[0];
+                int cursorPosition = Math.max(0, field.getSelectionStart());
+                field.setTransformationMethod(passwordVisible[0]
+                        ? android.text.method.HideReturnsTransformationMethod.getInstance()
+                        : android.text.method.PasswordTransformationMethod.getInstance());
+                field.setSelection(Math.min(cursorPosition, field.length()));
+                updatePasswordVisibilityIcon(field, context, passwordVisible[0]);
+                field.setContentDescription(passwordVisible[0]
+                        ? "ContraseÃ±a visible. Tocar el icono para ocultarla"
+                        : "ContraseÃ±a oculta. Tocar el icono para mostrarla");
+            }
+            return true;
+        });
+    }
+
+    private void updatePasswordVisibilityIcon(EditText field,
+            android.content.Context context, boolean passwordVisible) {
+        int iconId = passwordVisible ? R.drawable.ic_visibility_off : R.drawable.ic_visibility;
+        android.graphics.drawable.Drawable icon = context.getDrawable(iconId);
+        if (icon != null) {
+            icon.setTint(android.graphics.Color.parseColor("#C51B20"));
+            field.setCompoundDrawablesWithIntrinsicBounds(null, null, icon, null);
+        }
+    }
+
+    private void configureModalSpinnerAppearance(Spinner spinner) {
+        spinner.setBackgroundResource(R.drawable.bg_admin_modal_spinner);
+        spinner.setPadding(dp(12), 0, dp(36), 0);
+        spinner.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        spinner.setDropDownHorizontalOffset(0);
+        spinner.post(() -> spinner.setDropDownWidth(spinner.getWidth()));
+    }
+
+    private ArrayAdapter<String> createModalSpinnerAdapter(
+            android.content.Context context, String[] options) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
+                context, android.R.layout.simple_spinner_item, options) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                if (view instanceof TextView) {
+                    TextView text = (TextView) view;
+                    text.setTextColor(android.graphics.Color.parseColor("#263248"));
+                    text.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                    android.graphics.drawable.Drawable arrow =
+                            context.getDrawable(R.drawable.ic_arrow_drop_down);
+                    if (arrow != null) {
+                        arrow.setTint(android.graphics.Color.parseColor("#263248"));
+                        text.setCompoundDrawablesWithIntrinsicBounds(null, null, arrow, null);
+                        text.setCompoundDrawablePadding(dp(4));
+                    }
+                }
+                return view;
+            }
+        };
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        return adapter;
+    }
+
+    private boolean isDateField(String label) {
+        String normalized = label.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("fecha") || normalized.equals("inicio");
+    }
+
+    private boolean isTimeField(String label) {
+        String normalized = label.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("hora") || normalized.contains("apertura")
+                || normalized.contains("cierre") || normalized.contains("receso")
+                || normalized.equals("fin");
+    }
+
+    private void showModalDatePicker(android.content.Context context, EditText target) {
+        java.util.Calendar now = java.util.Calendar.getInstance();
+        android.widget.DatePicker datePicker = new android.widget.DatePicker(context);
+        datePicker.init(
+                now.get(java.util.Calendar.YEAR),
+                now.get(java.util.Calendar.MONTH),
+                now.get(java.util.Calendar.DAY_OF_MONTH),
+                null);
+        expandDatePickerHeader(datePicker);
+        datePicker.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        androidx.appcompat.app.AlertDialog picker = new MaterialAlertDialogBuilder(context)
+                .setTitle("Seleccionar fecha")
+                .setView(datePicker, 0, 0, 0, 0)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Aceptar", (dialog, which) -> target.setText(String.format(
+                        java.util.Locale.getDefault(),
+                        "%02d/%02d/%04d",
+                        datePicker.getDayOfMonth(),
+                        datePicker.getMonth() + 1,
+                        datePicker.getYear())))
+                .create();
+        picker.setOnShowListener(dialog -> {
+            android.view.Window window = picker.getWindow();
+            if (window != null) {
+                setPickerWindowWidth(picker);
+            }
+            datePicker.getLayoutParams().width = ViewGroup.LayoutParams.MATCH_PARENT;
+            expandDatePickerHeader(datePicker);
+            datePicker.requestLayout();
+        });
+        picker.show();
+    }
+
+    private void showModalTimePicker(android.content.Context context, EditText target) {
+        java.util.Calendar now = java.util.Calendar.getInstance();
+        android.widget.TimePicker timePicker = new android.widget.TimePicker(context);
+        timePicker.setIs24HourView(false);
+        timePicker.setHour(now.get(java.util.Calendar.HOUR_OF_DAY));
+        timePicker.setMinute(now.get(java.util.Calendar.MINUTE));
+        removePickerHorizontalPadding(timePicker);
+        timePicker.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        androidx.appcompat.app.AlertDialog picker = new MaterialAlertDialogBuilder(context)
+                .setTitle("Seleccionar hora")
+                .setView(timePicker, 0, 0, 0, 0)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Aceptar", (dialog, which) -> {
+                    java.util.Calendar selected = java.util.Calendar.getInstance();
+                    selected.set(java.util.Calendar.HOUR_OF_DAY, timePicker.getHour());
+                    selected.set(java.util.Calendar.MINUTE, timePicker.getMinute());
+                    target.setText(new java.text.SimpleDateFormat(
+                            "hh:mm a", java.util.Locale.getDefault()).format(selected.getTime()));
+                })
+                .create();
+        picker.setOnShowListener(dialog -> {
+            android.view.Window window = picker.getWindow();
+            if (window != null) {
+                setPickerWindowWidth(picker);
+            }
+            timePicker.getLayoutParams().width = ViewGroup.LayoutParams.MATCH_PARENT;
+            removePickerHorizontalPadding(timePicker);
+            timePicker.requestLayout();
+        });
+        picker.show();
+    }
+
+    private void setPickerWindowWidth(androidx.appcompat.app.AlertDialog picker) {
+        android.view.Window window = picker.getWindow();
+        if (window != null) {
+            int availableWidth = getResources().getDisplayMetrics().widthPixels - dp(32);
+            window.setLayout(
+                    availableWidth,
+                    android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void removePickerHorizontalPadding(View view) {
+        view.setPadding(0, view.getPaddingTop(), 0, view.getPaddingBottom());
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int index = 0; index < group.getChildCount(); index++) {
+                removePickerHorizontalPadding(group.getChildAt(index));
+            }
+        }
+    }
+
+    private void expandDatePickerHeader(android.widget.DatePicker datePicker) {
+        String[] headerIds = {
+                "date_picker_header",
+                "date_picker_header_container"
+        };
+        for (String idName : headerIds) {
+            int id = datePicker.getResources().getIdentifier(idName, "id", "android");
+            if (id != 0) {
+                View header = datePicker.findViewById(id);
+                if (header != null) {
+                    ViewGroup.LayoutParams params = header.getLayoutParams();
+                    if (params != null) {
+                        params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                        header.setLayoutParams(params);
+                    }
+                    header.setPadding(0, header.getPaddingTop(), 0, header.getPaddingBottom());
+                }
+            }
+        }
+    }
+
+    private void configureModalDateField(android.content.Context context, EditText field) {
+        field.setFocusable(false);
+        field.setClickable(true);
+        field.setInputType(android.text.InputType.TYPE_NULL);
+        field.setContentDescription("Seleccionar fecha");
+        field.setOnClickListener(v -> showModalDatePicker(context, field));
+    }
+
+    private boolean isModalSelection(String label, boolean specialtyAsSelection) {
+        String normalized = label.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("tipo documento")
+                || normalized.contains("categorÃ­a")
+                || normalized.equals("barbero")
+                || normalized.equals("servicio")
+                || normalized.contains("selecciona servicio")
+                || (specialtyAsSelection && normalized.equals("especialidad"));
+    }
+
+    private String[] getModalOptions(String label) {
+        String normalized = label.toLowerCase(java.util.Locale.ROOT);
+        if (normalized.contains("tipo documento")) {
+            return new String[]{"DUI", "Pasaporte", "Carnet de residente"};
+        }
+        if (normalized.equals("especialidad")) {
+            return new String[]{"Corte", "Barba", "Corte y barba"};
+        }
+        if (normalized.equals("barbero")) {
+            return new String[]{"Jose Canales", "Juan Carlos Canales", "Carlos Menjivar"};
+        }
+        if (normalized.equals("servicio")) {
+            return new String[]{"Corte de Cabello", "Combo Barba", "Corte y barba"};
+        }
+        return new String[]{"Corte", "Barba", "Combo"};
+    }
+
+    private String getModalHint(String label) {
+        String normalized = label.toLowerCase(java.util.Locale.ROOT);
+        if (normalized.contains("correo")) {
+            return "ejemplo@correo.com";
+        }
+        if (normalized.contains("contraseÃ±a")) {
+            return "Ingrese una contraseÃ±a";
+        }
+        if (normalized.contains("precio") || normalized.contains("coste")) {
+            return "0.00";
+        }
+        if (normalized.contains("duraciÃ³n")) {
+            return "Ej. 30";
+        }
+        if (normalized.contains("fecha")) {
+            return "dd/mm/aaaa";
+        }
+        if (normalized.contains("hora") || normalized.contains("apertura")
+                || normalized.contains("cierre") || normalized.contains("receso")
+                || normalized.equals("inicio") || normalized.equals("fin")) {
+            return "hh:mm a.m./p.m.";
+        }
+        if (normalized.contains("nombres")) {
+            return "Ingrese los nombres";
+        }
+        if (normalized.contains("apellidos")) {
+            return "Ingrese los apellidos";
+        }
+        return "Ingrese " + label.toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private int getModalInputType(String label) {
+        String normalized = label.toLowerCase(java.util.Locale.ROOT);
+        if (normalized.contains("correo")) {
+            return android.text.InputType.TYPE_CLASS_TEXT
+                    | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS;
+        }
+        if (normalized.contains("contraseÃ±a")) {
+            return android.text.InputType.TYPE_CLASS_TEXT
+                    | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD;
+        }
+        if (normalized.contains("precio") || normalized.contains("coste")) {
+            return android.text.InputType.TYPE_CLASS_NUMBER
+                    | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL;
+        }
+        if (normalized.contains("duraciÃ³n")) {
+            return android.text.InputType.TYPE_CLASS_NUMBER;
+        }
+        if (normalized.contains("numero doc") || normalized.contains("celular")) {
+            return android.text.InputType.TYPE_CLASS_PHONE;
+        }
+        if (normalized.contains("fecha")) {
+            return android.text.InputType.TYPE_CLASS_DATETIME
+                    | android.text.InputType.TYPE_DATETIME_VARIATION_DATE;
+        }
+        if (normalized.contains("hora") || normalized.contains("apertura")
+                || normalized.contains("cierre") || normalized.contains("receso")
+                || normalized.equals("fin")) {
+            return android.text.InputType.TYPE_CLASS_DATETIME
+                    | android.text.InputType.TYPE_DATETIME_VARIATION_TIME;
+        }
+        return android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_VARIATION_NORMAL;
+    }
+
     private android.content.Context createLightModalContext() {
         return new android.view.ContextThemeWrapper(this, R.style.Theme_AdminModalLight);
     }
 
-    private MaterialAlertDialogBuilder createLightDialogBuilder() {
+    MaterialAlertDialogBuilder createLightDialogBuilder() {
         return new MaterialAlertDialogBuilder(createLightModalContext());
     }
 
