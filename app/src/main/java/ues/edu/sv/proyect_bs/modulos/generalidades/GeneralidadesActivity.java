@@ -1,6 +1,8 @@
 package ues.edu.sv.proyect_bs;
 
 import android.os.Bundle;
+import android.content.Intent;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -41,8 +43,23 @@ public class GeneralidadesActivity extends AppCompatActivity {
     }
 
     void openAdminModule() {
-        startActivity(new android.content.Intent(this, MainActivity.class));
+        startActivity(new Intent(this, MainActivity.class));
         finish();
+    }
+
+    void openRoleModule(String profile) {
+        Intent intent = new Intent(this, RoleLandingActivity.class);
+        intent.putExtra("profile", profile);
+        startActivity(intent);
+        finish();
+    }
+
+    void showLoginError(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+
+    void showRegistrationError(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     boolean isDarkMode() {

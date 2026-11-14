@@ -63,14 +63,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Ingresa tu nombre de usuario y contrase&#241;a\npara continuar."
+                android:text="Ingresa tu correo electrónico y contrase&#241;a\npara continuar."
                 android:textColor="#777777"
                 android:textSize="14sp" />
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="22dp"
-                android:text="Nombre de usuario"
+                android:text="Correo electrónico"
                 android:textColor="#252525"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -82,8 +82,8 @@
                 android:background="@drawable/bg_general_field_light"
                 android:drawableStart="@drawable/ic_person"
                 android:drawablePadding="12dp"
-                android:hint="ana.lopez"
-                android:inputType="text"
+                android:hint="ana.lopez@ejemplo.com"
+                android:inputType="textEmailAddress"
                 android:textColor="#333333"
                 android:textColorHint="#888888" />
             <TextView

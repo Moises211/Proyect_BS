@@ -47,19 +47,21 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical">
                         <TextView
+                            android:id="@+id/profile_avatar"
                             android:layout_width="86dp"
                             android:layout_height="86dp"
                             android:background="@drawable/bg_profile_avatar"
                             android:gravity="center"
-                            android:text="JC"
+                            android:text="--"
                             android:textColor="@android:color/white"
                             android:textSize="26sp"
                             android:textStyle="bold" />
                         <TextView
+                            android:id="@+id/profile_identity"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="18dp"
-                            android:text="●  Juan Carlos Canales\n☆  Administrador\n✉  admin@gmail.com"
+                            android:text="Cargando perfil..."
                             android:textColor="#252525"
                             android:textSize="16sp"
                             android:lineSpacingExtra="4dp" />

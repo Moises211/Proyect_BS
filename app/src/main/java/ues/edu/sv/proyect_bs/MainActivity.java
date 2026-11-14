@@ -27,6 +27,7 @@ import com.google.android.material.textfield.TextInputEditText;
 public class MainActivity extends AppCompatActivity {
     private java.util.Calendar selectedWeekStart;
     private boolean darkMode;
+    private AuthApiClient.AdminProfile loadedAdminProfile;
     private final AdminNavigationController navigationController =
             new AdminNavigationController(this);
     private ImageView promotionImageTarget;
@@ -44,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (!SessionManager.hasAdminAccess(this)) {
+            openGeneralidades();
+            return;
+        }
         darkMode = getSharedPreferences("app_preferences", MODE_PRIVATE)
                 .getBoolean("dark_mode", false);
         showScreen(R.layout.pantalla_inicial);
@@ -797,12 +802,265 @@ public class MainActivity extends AppCompatActivity {
                 null);
     }
 
-    void showProfileForm() {
-        showStandardForm("Juan Carlos Canales", "Guardar",
-                new String[]{"Nombres", "Apellidos", "Tipo Documento", "Numero Doc.",
-                        "Correo Electronico", "Numero Celular"},
-                new String[]{"Juan Carlos", "Canales", "DUI", "000000-0",
-                        "admin@gmail.com", "77223344"});
+    interface ProfileUpdateListener {
+        void onSave(String names, String lastNames, long documentId, String document,
+                    String email, String phone, String birthDate);
+    }
+
+    void showProfileForm(java.util.List<ues.edu.sv.proyect_bs.modelos.TipoDocumento> documents,
+            ProfileUpdateListener listener) {
+        AuthApiClient.AdminProfile profile = loadedAdminProfile;
+        if (profile == null) {
+            android.widget.Toast.makeText(this,
+                    "Espera a que carguen los datos del perfil.",
+                    android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_standard, null);
+        ((TextView) content.findViewById(R.id.modal_admin_title))
+                .setText((profile.names + " " + profile.lastNames).trim());
+        LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
+        String[] labels = {"Nombres", "Apellidos", "Tipo Documento", "Numero Doc.",
+                "Correo Electronico", "Numero Celular", "Fecha Nacimiento"};
+        String[] values = {profile.names, profile.lastNames, "", profile.document,
+                profile.email, profile.phone, toDisplayDate(profile.birthDate)};
+        EditText[] inputs = new EditText[labels.length];
+        final Spinner[] documentSpinner = {null};
+        for (int i = 0; i < labels.length; i++) {
+            TextView label = new TextView(modalContext);
+            label.setText(labels[i]);
+            label.setTextColor(android.graphics.Color.parseColor("#263248"));
+            label.setTextSize(14);
+            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            labelParams.topMargin = dp(8);
+            fields.addView(label, labelParams);
+            if (i == 2) {
+                documentSpinner[0] = new Spinner(modalContext);
+                configureModalSpinnerAppearance(documentSpinner[0]);
+                String[] options = new String[documents.size() + 1];
+                options[0] = "Seleccionar tipo documento";
+                for (int index = 0; index < documents.size(); index++) {
+                    options[index + 1] = documents.get(index).nombredocumento;
+                }
+                documentSpinner[0].setAdapter(createModalSpinnerAdapter(modalContext, options));
+                documentSpinner[0].setPrompt("Seleccione tipo documento");
+                documentSpinner[0].setContentDescription("Selector de tipo documento");
+                int selected = 0;
+                for (int index = 0; index < documents.size(); index++) {
+                    if (documents.get(index).iddocumento == profile.documentId) {
+                        selected = index + 1;
+                        break;
+                    }
+                }
+                documentSpinner[0].setSelection(selected);
+                fields.addView(documentSpinner[0], new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+            } else {
+                inputs[i] = (EditText) createModalField(
+                        modalContext, labels[i], values[i], false);
+                if (i == 0 || i == 1) {
+                    configureNameInput(inputs[i]);
+                } else if (i == 4) {
+                    inputs[i].setEnabled(false);
+                    inputs[i].setAlpha(0.65f);
+                } else if (i == 5) {
+                    configurePhoneInput(inputs[i]);
+                }
+                fields.addView(inputs[i], new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+            }
+        }
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
+                .setView(content)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Guardar", null)
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                    .setTextColor(android.graphics.Color.WHITE);
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                    .setBackgroundColor(android.graphics.Color.parseColor("#287F8D"));
+            dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
+                    .setTextColor(android.graphics.Color.WHITE);
+            dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
+                    .setBackgroundColor(android.graphics.Color.parseColor("#C51B20"));
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+                        int selected = documentSpinner[0] == null
+                                ? 0 : documentSpinner[0].getSelectedItemPosition() - 1;
+                        if (selected < 0 || selected >= documents.size()) {
+                            android.widget.Toast.makeText(MainActivity.this,
+                                    "Selecciona un tipo de documento válido.",
+                                    android.widget.Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        long documentId = selected >= 0 && selected < documents.size()
+                                ? documents.get(selected).iddocumento : 0L;
+                        String names = inputs[0].getText().toString().trim();
+                        String lastNames = inputs[1].getText().toString().trim();
+                        String phone = inputs[5].getText().toString().trim();
+                        String displayBirthDate = inputs[6].getText().toString().trim();
+                        if (!isValidName(names)) {
+                            inputs[0].setError("Usa sólo letras y no lo dejes vacío.");
+                            return;
+                        }
+                        if (!isValidName(lastNames)) {
+                            inputs[1].setError("Usa sólo letras y no lo dejes vacío.");
+                            return;
+                        }
+                        String document = inputs[3].getText().toString().trim();
+                        if (document.length() < 8) {
+                            inputs[3].setError(
+                                    "El identificador es obligatorio y debe tener al menos 8 caracteres.");
+                            return;
+                        }
+                        if (!phone.matches("\\d{8}")) {
+                            inputs[5].setError("Debe contener exactamente 8 números.");
+                            return;
+                        }
+                        if (!isAtLeastSixteen(displayBirthDate)) {
+                            showFieldError(inputs[6], "La edad mínima es de 16 años.");
+                            return;
+                        }
+                        listener.onSave(names, lastNames, documentId,
+                                document,
+                                inputs[4].getText().toString().trim(),
+                                phone, toApiDate(displayBirthDate));
+                        dialog.dismiss();
+                    });
+        });
+        dialog.show();
+    }
+
+    private void configureNameInput(EditText input) {
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        input.setFilters(new android.text.InputFilter[]{(source, start, end, dest, dstart, dend) -> {
+            StringBuilder accepted = new StringBuilder();
+            for (int index = start; index < end; index++) {
+                char character = source.charAt(index);
+                if (Character.isLetter(character) || Character.isWhitespace(character)) {
+                    accepted.append(character);
+                }
+            }
+            String result = accepted.toString();
+            return result.equals(source.subSequence(start, end).toString()) ? null : result;
+        }});
+    }
+
+    private void configurePhoneInput(EditText input) {
+        input.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        input.setFilters(new android.text.InputFilter[]{
+                new android.text.InputFilter.LengthFilter(8),
+                (source, start, end, dest, dstart, dend) -> {
+                    StringBuilder accepted = new StringBuilder();
+                    for (int index = start; index < end; index++) {
+                        if (Character.isDigit(source.charAt(index))) {
+                            accepted.append(source.charAt(index));
+                        }
+                    }
+                    String result = accepted.toString();
+                    return result.equals(source.subSequence(start, end).toString()) ? null : result;
+                }
+        });
+    }
+
+    private void showFieldError(EditText field, String message) {
+        android.graphics.drawable.Drawable errorIcon =
+                getDrawable(android.R.drawable.ic_dialog_alert);
+        field.setError(message, errorIcon);
+        field.requestFocus();
+    }
+
+    private boolean isValidName(String value) {
+        return !value.isEmpty() && value.matches("[\\p{L}]+(?:\\s[\\p{L}]+)*");
+    }
+
+    private boolean isAtLeastSixteen(String value) {
+        if (value.isEmpty()) {
+            return false;
+        }
+        try {
+            java.util.Date birthDate = parseProfileDate(value);
+            if (birthDate == null) {
+                return false;
+            }
+            java.util.Calendar minimum = java.util.Calendar.getInstance();
+            minimum.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            minimum.set(java.util.Calendar.MINUTE, 0);
+            minimum.set(java.util.Calendar.SECOND, 0);
+            minimum.set(java.util.Calendar.MILLISECOND, 0);
+            minimum.add(java.util.Calendar.YEAR, -16);
+            java.util.Calendar birth = java.util.Calendar.getInstance();
+            birth.setTime(birthDate);
+            birth.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            birth.set(java.util.Calendar.MINUTE, 0);
+            birth.set(java.util.Calendar.SECOND, 0);
+            birth.set(java.util.Calendar.MILLISECOND, 0);
+            return !birth.after(minimum);
+        } catch (Exception exception) {
+            return false;
+        }
+    }
+
+    private java.util.Date parseProfileDate(String value) {
+        String[] patterns = {"dd/MM/yyyy", "yyyy-MM-dd"};
+        for (String pattern : patterns) {
+            try {
+                java.text.SimpleDateFormat format = new java.text.SimpleDateFormat(
+                        pattern, java.util.Locale.ROOT);
+                format.setLenient(false);
+                java.text.ParsePosition position = new java.text.ParsePosition(0);
+                java.util.Date parsed = format.parse(value, position);
+                if (parsed != null && position.getIndex() == value.length()) {
+                    return parsed;
+                }
+            } catch (Exception ignored) {
+                // Probar el siguiente formato permitido.
+            }
+        }
+        return null;
+    }
+
+    private String toDisplayDate(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return "";
+        }
+        try {
+            java.text.SimpleDateFormat api = new java.text.SimpleDateFormat(
+                    "yyyy-MM-dd", java.util.Locale.ROOT);
+            java.text.SimpleDateFormat display = new java.text.SimpleDateFormat(
+                    "dd/MM/yyyy", java.util.Locale.getDefault());
+            return display.format(api.parse(value));
+        } catch (Exception ignored) {
+            return value;
+        }
+    }
+
+    private String toApiDate(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return "";
+        }
+        try {
+            java.text.SimpleDateFormat display = new java.text.SimpleDateFormat(
+                    "dd/MM/yyyy", java.util.Locale.getDefault());
+            java.text.SimpleDateFormat api = new java.text.SimpleDateFormat(
+                    "yyyy-MM-dd", java.util.Locale.ROOT);
+            return api.format(display.parse(value));
+        } catch (Exception ignored) {
+            return value;
+        }
+    }
+
+    void setLoadedAdminProfile(AuthApiClient.AdminProfile profile) {
+        loadedAdminProfile = profile;
+    }
+
+    AuthApiClient.AdminProfile getLoadedAdminProfile() {
+        return loadedAdminProfile;
     }
 
     void showPasswordForm() {
@@ -914,7 +1172,7 @@ public class MainActivity extends AppCompatActivity {
             configurePasswordField(field, context);
         }
         if (isDateField(label) || isTimeField(label)) {
-            field.setFocusable(false);
+            field.setFocusableInTouchMode(true);
             field.setClickable(true);
             field.setOnClickListener(v -> {
                 if (isDateField(label)) {

@@ -1,0 +1,35 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E4E4E4"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="M&#243;dulo de barbero"
+        android:textColor="#252525"
+        android:textSize="26sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/role_landing_profile"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Perfil: BARBERO"
+        android:textColor="#777777"
+        android:textSize="15sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/role_landing_logout"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="36dp"
+        android:text="Cerrar sesi&#243;n"
+        android:textSize="14sp"
+        app:cornerRadius="26dp" />
+</LinearLayout>

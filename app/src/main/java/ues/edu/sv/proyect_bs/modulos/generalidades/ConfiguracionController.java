@@ -19,9 +19,11 @@ final class ConfiguracionController extends GeneralidadesViewController {
                 host.setDarkMode(checked);
             }
         });
+        rememberSwitch.setChecked(SessionManager.shouldRememberLogin(host));
+        rememberSwitch.setOnCheckedChangeListener((button, checked) ->
+                SessionManager.setRememberLogin(host, checked));
         host.findViewById(R.id.general_settings_save).setOnClickListener(v ->
                 host.showScreen(R.layout.general_login));
         applyTheme(host.findViewById(R.id.general_settings_root));
-        rememberSwitch.setChecked(false);
     }
 }

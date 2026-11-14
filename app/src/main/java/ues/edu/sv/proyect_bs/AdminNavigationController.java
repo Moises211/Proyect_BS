@@ -117,7 +117,9 @@ final class AdminNavigationController {
         if (logout != null) {
             logout.setOnClickListener(v -> {
                 dialog.dismiss();
-                host.openGeneralidades();
+                String token = SessionManager.getToken(host);
+                SessionManager.clear(host);
+                new AuthApiClient().logout(token, () -> host.openGeneralidades());
             });
         }
     }

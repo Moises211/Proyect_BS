@@ -87,12 +87,20 @@ abstract class GeneralidadesViewController {
     }
 
     protected void configureSpinnerField(int rootId, String[] options) {
+        long[] ids = new long[options.length];
+        for (int index = 0; index < options.length; index++) {
+            ids[index] = index + 1L;
+        }
+        configureSpinnerField(rootId, options, ids);
+    }
+
+    protected void configureSpinnerField(int rootId, String[] options, long[] ids) {
         View root = host.findViewById(rootId);
         if (!(root instanceof ViewGroup)) {
             return;
         }
         ViewGroup container = (ViewGroup) root;
-        EditText current = root.findViewById(R.id.general_field_input);
+        View current = root.findViewById(R.id.general_field_input);
         if (current == null) {
             return;
         }
@@ -127,8 +135,20 @@ abstract class GeneralidadesViewController {
         };
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
-        spinner.setTag("general_selection");
+        spinner.setTag(R.id.general_field_input, ids);
         container.addView(spinner, index);
+    }
+
+    protected long getSelectedSpinnerId(int rootId) {
+        View root = host.findViewById(rootId);
+        View value = root == null ? null : root.findViewById(R.id.general_field_input);
+        if (!(value instanceof Spinner)) {
+            return 0L;
+        }
+        Spinner spinner = (Spinner) value;
+        long[] ids = (long[]) spinner.getTag(R.id.general_field_input);
+        int position = spinner.getSelectedItemPosition() - 1;
+        return ids == null || position < 0 || position >= ids.length ? 0L : ids[position];
     }
 
     protected void configureDateField(int rootId) {
