@@ -401,8 +401,9 @@ public class MainActivity extends AppCompatActivity {
 
     void configureBarberActions(int itemId) {
         View item = findViewById(itemId);
-        item.findViewById(R.id.action_edit_barber).setOnClickListener(v ->
-                showBarberForm(true));
+        item.findViewById(R.id.action_edit_barber).setOnClickListener(v -> {
+            // BarberosController supplies the selected barber and its loaded catalogs.
+        });
     }
 
     void configureSpecialtyActions(int itemId) {
@@ -464,6 +465,10 @@ public class MainActivity extends AppCompatActivity {
 
     void setDisabledCard(int itemId, int switchId) {
         View item = findViewById(itemId);
+        setDisabledCard(item, switchId);
+    }
+
+    void setDisabledCard(View item, int switchId) {
         if (item instanceof com.google.android.material.card.MaterialCardView) {
             ((com.google.android.material.card.MaterialCardView) item)
                     .setCardBackgroundColor(android.graphics.Color.rgb(224, 224, 224));
@@ -660,17 +665,238 @@ public class MainActivity extends AppCompatActivity {
                         "admin@gmail.com", "77223344"} : null);
     }
 
-    void showBarberForm(boolean editing) {
-        showStandardForm(editing ? "Datos del Barbero" : "Ingresar Nuevo Barbero", "Guardar",
-                new String[]{"Nombres", "Apellidos", "Tipo Documento", "Numero Doc.",
-                        "Correo Electronico", "Numero Celular", "ContraseÃ±a", "Especialidad"},
-                editing ? new String[]{"Jose Carlos", "Canales", "DUI", "000000-0",
-                        "Example@ex...", "77223344", "**************", "Corte"} : null);
+    interface BarberFormListener {
+        void onSave(String names, String lastNames, long documentId, String document,
+                    String email, String phone, String password, long specialtyId);
+    }
+
+    interface ServiceFormListener {
+        void onSave(ues.edu.sv.proyect_bs.modelos.Servicios service);
+    }
+
+    void showBarberForm(boolean editing,
+            ues.edu.sv.proyect_bs.modelos.Barberos barber,
+            ues.edu.sv.proyect_bs.modelos.Persona person,
+            java.util.List<ues.edu.sv.proyect_bs.modelos.TipoDocumento> documents,
+            java.util.List<ues.edu.sv.proyect_bs.modelos.CategoriaServicio> specialties,
+            BarberFormListener listener) {
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_standard, null);
+        ((TextView) content.findViewById(R.id.modal_admin_title))
+                .setText(editing ? "Datos del Barbero" : "Ingresar Nuevo Barbero");
+        LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
+        String[] labels = {"Nombres", "Apellidos", "Tipo Documento", "Numero Doc.",
+                "Correo Electronico", "Numero Celular", "Contraseña", "Especialidad"};
+        String[] values = {
+                person == null ? "" : safeModalValue(person.nombres),
+                person == null ? "" : safeModalValue(person.apellidos),
+                "", person == null ? "" : safeModalValue(person.identificadordoc),
+                barber == null ? "" : safeModalValue(barber.correo_electronico),
+                person == null ? "" : safeModalValue(person.numero_celular), "", ""
+        };
+        EditText[] inputs = new EditText[labels.length];
+        Spinner[] documentSpinner = {null};
+        Spinner[] specialtySpinner = {null};
+        for (int i = 0; i < labels.length; i++) {
+            TextView label = new TextView(modalContext);
+            label.setText(labels[i]);
+            label.setTextColor(android.graphics.Color.parseColor("#263248"));
+            label.setTextSize(14);
+            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            labelParams.topMargin = dp(8);
+            fields.addView(label, labelParams);
+            if (i == 2 || i == 7) {
+                Spinner spinner = new Spinner(modalContext);
+                configureModalSpinnerAppearance(spinner);
+                if (i == 2) {
+                    documentSpinner[0] = spinner;
+                    String[] options = new String[documents.size() + 1];
+                    options[0] = "Seleccionar tipo documento";
+                    for (int index = 0; index < documents.size(); index++) {
+                        options[index + 1] = documents.get(index).nombredocumento;
+                    }
+                    spinner.setAdapter(createModalSpinnerAdapter(modalContext, options));
+                    for (int index = 0; index < documents.size(); index++) {
+                        if (person != null && documents.get(index).iddocumento
+                                == (person.iddocumento == null ? 0L : person.iddocumento)) {
+                            spinner.setSelection(index + 1);
+                            break;
+                        }
+                    }
+                } else {
+                    specialtySpinner[0] = spinner;
+                    String[] options = new String[specialties.size() + 1];
+                    options[0] = "Seleccionar especialidad";
+                    for (int index = 0; index < specialties.size(); index++) {
+                        options[index + 1] = specialties.get(index).nombre;
+                    }
+                    spinner.setAdapter(createModalSpinnerAdapter(modalContext, options));
+                    for (int index = 0; index < specialties.size(); index++) {
+                        if (barber != null && specialties.get(index).idcategoria_servicio
+                                == (barber.especialidad == null ? 0L : barber.especialidad)) {
+                            spinner.setSelection(index + 1);
+                            break;
+                        }
+                    }
+                }
+                fields.addView(spinner, new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+            } else {
+                inputs[i] = (EditText) createModalField(
+                        modalContext, labels[i], values[i], false);
+                if (i == 0 || i == 1) {
+                    configureNameInput(inputs[i]);
+                } else if (i == 4) {
+                    inputs[i].setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                            | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+                } else if (i == 5) {
+                    configurePhoneInput(inputs[i]);
+                } else if (i == 6) {
+                    configurePasswordField(inputs[i], modalContext);
+                    if (editing) {
+                        inputs[i].setText("********");
+                        inputs[i].setTag("existing-password-mask");
+                        inputs[i].setHint("Contraseña no editable");
+                        inputs[i].setEnabled(false);
+                        inputs[i].setFocusable(false);
+                        inputs[i].setClickable(false);
+                        inputs[i].setCursorVisible(false);
+                    }
+                }
+                fields.addView(inputs[i], new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+            }
+        }
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
+                .setView(content)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Guardar", null)
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            styleModalButtons(dialog);
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+                        int documentPosition = documentSpinner[0].getSelectedItemPosition() - 1;
+                        int specialtyPosition = specialtySpinner[0].getSelectedItemPosition() - 1;
+                        if (documentPosition < 0 || documentPosition >= documents.size()) {
+                            showFieldError(inputs[3], "Selecciona un tipo de documento válido.");
+                            return;
+                        }
+                        if (specialtyPosition < 0 || specialtyPosition >= specialties.size()) {
+                            showFieldError(inputs[6], "Selecciona una especialidad válida.");
+                            return;
+                        }
+                        String names = inputs[0].getText().toString().trim();
+                        String lastNames = inputs[1].getText().toString().trim();
+                        String document = inputs[3].getText().toString().trim();
+                        String email = inputs[4].getText().toString().trim();
+                        String phone = inputs[5].getText().toString().trim();
+                        boolean keepingExistingPassword =
+                                editing && "existing-password-mask".equals(inputs[6].getTag());
+                        String password = keepingExistingPassword
+                                ? "" : inputs[6].getText().toString();
+                        if (!isValidName(names)) {
+                            showFieldError(inputs[0], "Usa sólo letras y no lo dejes vacío.");
+                            return;
+                        }
+                        if (!isValidName(lastNames)) {
+                            showFieldError(inputs[1], "Usa sólo letras y no lo dejes vacío.");
+                            return;
+                        }
+                        if (document.length() < 8) {
+                            showFieldError(inputs[3], "Debe tener al menos 8 caracteres.");
+                            return;
+                        }
+                        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                            showFieldError(inputs[4], "Ingresa un correo válido.");
+                            return;
+                        }
+                        if (!phone.matches("\\d{8}")) {
+                            showFieldError(inputs[5], "Debe contener exactamente 8 números.");
+                            return;
+                        }
+                        if (!editing && password.trim().isEmpty()) {
+                            showFieldError(inputs[6], "La contraseña es obligatoria.");
+                            return;
+                        }
+                        listener.onSave(names, lastNames,
+                                documents.get(documentPosition).iddocumento, document,
+                                email, phone, password,
+                                specialties.get(specialtyPosition).idcategoria_servicio);
+                        dialog.dismiss();
+                    });
+        });
+        dialog.show();
+    }
+
+    private String safeModalValue(String value) {
+        return value == null ? "" : value;
+    }
+
+    private void styleModalButtons(androidx.appcompat.app.AlertDialog dialog) {
+        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                .setTextColor(android.graphics.Color.WHITE);
+        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                .setBackgroundColor(android.graphics.Color.parseColor("#287F8D"));
+        dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
+                .setTextColor(android.graphics.Color.WHITE);
+        dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
+                .setBackgroundColor(android.graphics.Color.parseColor("#C51B20"));
     }
 
     void showSpecialtyForm() {
-        showStandardForm("Ingresar Especialidad", "Guardar",
-                new String[]{"Especialidad"}, null);
+        showSpecialtyForm(false, null, null);
+    }
+
+    interface SpecialtyFormListener {
+        void onSave(ues.edu.sv.proyect_bs.modelos.CategoriaServicio specialty);
+    }
+
+    void showSpecialtyForm(boolean editing,
+            ues.edu.sv.proyect_bs.modelos.CategoriaServicio specialty,
+            SpecialtyFormListener listener) {
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_standard, null);
+        ((TextView) content.findViewById(R.id.modal_admin_title)).setText(
+                editing ? "Datos de la Especialidad" : "Ingresar Especialidad");
+        LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
+        TextView label = new TextView(modalContext);
+        label.setText("Especialidad");
+        label.setTextColor(android.graphics.Color.parseColor("#263248"));
+        label.setTextSize(14);
+        fields.addView(label, new LinearLayout.LayoutParams(-1, dp(28)));
+        EditText name = (EditText) createModalField(modalContext, "Especialidad",
+                specialty == null ? "" : safeModalValue(specialty.nombre), false);
+        fields.addView(name, new LinearLayout.LayoutParams(-1, dp(44)));
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
+                .setView(content)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Guardar", null)
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            styleModalButtons(dialog);
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+                        String value = name.getText().toString().trim();
+                        if (value.isEmpty()) {
+                            showFieldError(name, "Ingresa el nombre de la especialidad.");
+                            return;
+                        }
+                        if (listener != null) {
+                            ues.edu.sv.proyect_bs.modelos.CategoriaServicio result =
+                                    specialty == null
+                                            ? new ues.edu.sv.proyect_bs.modelos.CategoriaServicio()
+                                            : specialty;
+                            result.nombre = value;
+                            listener.onSave(result);
+                        }
+                        dialog.dismiss();
+                    });
+        });
+        dialog.show();
     }
 
     void showBaseShiftForm() {
@@ -689,9 +915,125 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void showServiceForm() {
-        showStandardForm("Ingresar Nuevo Servicio", "Guardar Servicio",
-                new String[]{"Nombre del Servicio", "Precio ($)", "DuraciÃ³n (min)", "CategorÃ­a"},
-                null);
+        showServiceForm(false, null, java.util.Collections.emptyList(), null);
+    }
+
+    void showServiceForm(boolean editing, ues.edu.sv.proyect_bs.modelos.Servicios service,
+            java.util.List<ues.edu.sv.proyect_bs.modelos.CategoriaServicio> categories,
+            ServiceFormListener listener) {
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_standard, null);
+        ((TextView) content.findViewById(R.id.modal_admin_title)).setText(
+                editing ? "Datos del Servicio" : "Ingresar Nuevo Servicio");
+        LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
+        EditText name = (EditText) createModalField(modalContext, "Nombre del Servicio",
+                service == null ? "" : safeModalValue(service.nombre_servicio), false);
+        EditText price = (EditText) createModalField(modalContext, "Precio ($)",
+                service == null || service.precio == null ? "" : String.valueOf(service.precio), false);
+        EditText duration = (EditText) createModalField(modalContext, "Duración (min)",
+                service == null || service.duracion == null ? "" : String.valueOf(service.duracion), false);
+        price.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
+                | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        duration.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        addModalFieldLabel(fields, modalContext, "Nombre del Servicio");
+        fields.addView(name, new LinearLayout.LayoutParams(-1, dp(44)));
+        addModalFieldLabel(fields, modalContext, "Precio ($)");
+        fields.addView(price, new LinearLayout.LayoutParams(-1, dp(44)));
+        addModalFieldLabel(fields, modalContext, "Duración (min)");
+        fields.addView(duration, new LinearLayout.LayoutParams(-1, dp(44)));
+        TextView categoryLabel = new TextView(modalContext);
+        categoryLabel.setText("Categoría");
+        categoryLabel.setTextColor(android.graphics.Color.parseColor("#263248"));
+        categoryLabel.setTextSize(14);
+        fields.addView(categoryLabel, new LinearLayout.LayoutParams(-1, dp(28)));
+        Spinner categorySpinner = new Spinner(modalContext);
+        configureModalSpinnerAppearance(categorySpinner);
+        String[] options = new String[categories.size() + 1];
+        options[0] = "Seleccionar categoría";
+        for (int index = 0; index < categories.size(); index++) {
+            options[index + 1] = categories.get(index).nombre;
+        }
+        categorySpinner.setAdapter(createModalSpinnerAdapter(modalContext, options));
+        if (service != null && service.idcategoria_servicio != null) {
+            for (int index = 0; index < categories.size(); index++) {
+                if (categories.get(index).idcategoria_servicio
+                        == service.idcategoria_servicio) {
+                    categorySpinner.setSelection(index + 1);
+                    break;
+                }
+            }
+        }
+        fields.addView(categorySpinner, new LinearLayout.LayoutParams(-1, dp(44)));
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
+                .setView(content)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Guardar", null)
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            styleModalButtons(dialog);
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+                        if (name.getText().toString().trim().isEmpty()) {
+                            showFieldError(name, "Ingresa el nombre del servicio.");
+                            return;
+                        }
+                        double parsedPrice;
+                        try {
+                            parsedPrice = Double.parseDouble(price.getText().toString().trim());
+                            if (parsedPrice < 0) {
+                                throw new NumberFormatException();
+                            }
+                        } catch (NumberFormatException exception) {
+                            showFieldError(price, "Ingresa un precio válido.");
+                            return;
+                        }
+                        try {
+                            int parsedDuration = Integer.parseInt(
+                                    duration.getText().toString().trim());
+                            if (parsedDuration <= 0) {
+                                throw new NumberFormatException();
+                            }
+                        } catch (NumberFormatException exception) {
+                            showFieldError(duration, "Ingresa un tiempo válido en minutos.");
+                            return;
+                        }
+                        if (categorySpinner.getSelectedItemPosition() <= 0) {
+                            showFieldError(duration, "Selecciona una categoría válida.");
+                            return;
+                        }
+                        if (listener != null) {
+                            ues.edu.sv.proyect_bs.modelos.Servicios value =
+                                    service == null
+                                            ? new ues.edu.sv.proyect_bs.modelos.Servicios()
+                                            : service;
+                            value.nombre_servicio = name.getText().toString().trim();
+                            value.precio = parsedPrice;
+                            value.duracion = Integer.parseInt(
+                                    duration.getText().toString().trim());
+                            if (value.estado == null) {
+                                value.estado = Boolean.TRUE;
+                            }
+                            value.idcategoria_servicio = categories.get(
+                                    categorySpinner.getSelectedItemPosition() - 1)
+                                    .idcategoria_servicio;
+                            listener.onSave(value);
+                        }
+                        dialog.dismiss();
+                    });
+        });
+        dialog.show();
+    }
+
+    private void addModalFieldLabel(LinearLayout fields, android.content.Context context,
+            String text) {
+        TextView label = new TextView(context);
+        label.setText(text);
+        label.setTextColor(android.graphics.Color.parseColor("#263248"));
+        label.setTextSize(14);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(28));
+        params.topMargin = dp(8);
+        fields.addView(label, params);
     }
 
     void showBaseScheduleForm() {

@@ -6,6 +6,10 @@ import android.util.Log;
 
 import org.json.JSONObject;
 
+import ues.edu.sv.proyect_bs.modelos.Barberos;
+import ues.edu.sv.proyect_bs.modelos.Servicios;
+import ues.edu.sv.proyect_bs.modelos.CategoriaServicio;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,6 +55,31 @@ final class AuthApiClient {
 
     interface ProfileUpdateCallback {
         void onSuccess();
+        void onError(String message);
+    }
+
+    interface BarberStatusCallback {
+        void onSuccess();
+        void onError(String message);
+    }
+
+    interface BarberFormCallback {
+        void onSuccess(long barberId, long personId);
+        void onError(String message);
+    }
+
+    interface ServiceFormCallback {
+        void onSuccess(Servicios service);
+        void onError(String message);
+    }
+
+    interface ServiceActionCallback {
+        void onSuccess();
+        void onError(String message);
+    }
+
+    interface SpecialtyFormCallback {
+        void onSuccess(CategoriaServicio specialty);
         void onError(String message);
     }
 
@@ -252,6 +281,227 @@ final class AuthApiClient {
         });
     }
 
+    void updateBarberStatus(String token, Barberos barber, BarberStatusCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject body = new JSONObject()
+                        .put("idbarberos", barber.idbarberos)
+                        .put("foto_perfil", barber.foto_perfil)
+                        .put("salario", barber.salario)
+                        .put("estado", Boolean.TRUE.equals(barber.estado))
+                        .put("correo_electronico", barber.correo_electronico);
+                if (barber.idpersona != null) {
+                    body.put("persona", new JSONObject().put("idpersona", barber.idpersona));
+                }
+                if (barber.especialidad != null) {
+                    body.put("especialidad",
+                            new JSONObject().put("idcategoria_servicio", barber.especialidad));
+                }
+                putAuthorizedJson("/barberos/" + barber.idbarberos, token, body);
+                mainHandler.post(callback::onSuccess);
+            } catch (SocketTimeoutException exception) {
+                mainHandler.post(() -> callback.onError("La API no respondió a tiempo."));
+            } catch (Exception exception) {
+                Log.e(TAG, "Error actualizando estado del barbero", exception);
+                mainHandler.post(() -> callback.onError("No se pudo actualizar el estado del barbero."));
+            }
+        });
+    }
+
+    void saveBarber(String token, boolean editing, long barberId, long personId,
+                    long documentId, long specialtyId, String names, String lastNames,
+                    String document, String email, String phone, String password,
+                    BarberFormCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject person = new JSONObject()
+                        .put("nombres", names)
+                        .put("apellidos", lastNames)
+                        .put("identificadordoc", document)
+                        .put("numero_celular", phone)
+                        .put("tipoDocumento",
+                                new JSONObject().put("iddocumento", documentId));
+                JSONObject personResponse;
+                if (editing) {
+                    person.put("idpersona", personId);
+                    personResponse = putAuthorizedJson("/personas/" + personId, token, person);
+                } else {
+                    personResponse = postAuthorizedJson("/personas", token, person);
+                }
+                long savedPersonId = firstLong(personResponse, "idpersona", "idPersona");
+                if (savedPersonId <= 0L) {
+                    savedPersonId = personId;
+                }
+                JSONObject barber = new JSONObject()
+                        .put("estado", true)
+                        .put("correo_electronico", email)
+                        .put("contraseña", password)
+                        .put("persona", new JSONObject().put("idpersona", savedPersonId))
+                        .put("especialidad",
+                                new JSONObject().put("idcategoria_servicio", specialtyId));
+                JSONObject barberResponse;
+                if (editing) {
+                    barber.put("idbarberos", barberId);
+                    barberResponse = putAuthorizedJson("/barberos/" + barberId, token, barber);
+                } else {
+                    barberResponse = postAuthorizedJson("/barberos", token, barber);
+                }
+                long savedBarberId = firstLong(barberResponse, "idbarberos", "idBarberos");
+                if (savedBarberId <= 0L) {
+                    savedBarberId = barberId;
+                }
+                final long finalPersonId = savedPersonId;
+                final long finalBarberId = savedBarberId;
+                mainHandler.post(() -> callback.onSuccess(finalBarberId, finalPersonId));
+            } catch (SocketTimeoutException exception) {
+                mainHandler.post(() -> callback.onError("La API no respondió a tiempo."));
+            } catch (Exception exception) {
+                Log.e(TAG, "Error guardando barbero", exception);
+                mainHandler.post(() -> callback.onError("No se pudo guardar el barbero."));
+            }
+        });
+    }
+
+    void saveService(String token, boolean editing, Servicios service,
+            ServiceFormCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject body = new JSONObject()
+                        .put("nombre_servicio", service.nombre_servicio)
+                        .put("precio", service.precio)
+                        .put("duracion", service.duracion)
+                        .put("estado", Boolean.TRUE.equals(service.estado))
+                        .put("categoriaServicio", new JSONObject()
+                                .put("idcategoria_servicio", service.idcategoria_servicio));
+                JSONObject response;
+                if (editing) {
+                    body.put("idservicio", service.idservicio);
+                    response = putAuthorizedJson("/servicios/" + service.idservicio, token, body);
+                } else {
+                    response = postAuthorizedJson("/servicios", token, body);
+                }
+                Servicios saved = new Servicios();
+                saved.idservicio = firstLong(response, "idservicio", "idServicio");
+                if (saved.idservicio <= 0L) {
+                    saved.idservicio = service.idservicio;
+                }
+                saved.nombre_servicio = response.optString("nombre_servicio",
+                        service.nombre_servicio);
+                saved.precio = response.has("precio")
+                        ? response.optDouble("precio") : service.precio;
+                saved.duracion = response.has("duracion")
+                        ? response.optInt("duracion") : service.duracion;
+                saved.estado = response.has("estado")
+                        ? response.optBoolean("estado") : service.estado;
+                saved.idcategoria_servicio = firstLong(response,
+                        "idcategoria_servicio", "idCategoriaServicio");
+                if (saved.idcategoria_servicio <= 0L) {
+                    JSONObject category = response.optJSONObject("categoriaServicio");
+                    saved.idcategoria_servicio = category == null
+                            ? service.idcategoria_servicio
+                            : firstLong(category, "idcategoria_servicio",
+                                    "idCategoriaServicio");
+                }
+                mainHandler.post(() -> callback.onSuccess(saved));
+            } catch (SocketTimeoutException exception) {
+                mainHandler.post(() -> callback.onError("La API no respondió a tiempo."));
+            } catch (Exception exception) {
+                Log.e(TAG, "Error guardando servicio", exception);
+                mainHandler.post(() -> callback.onError(exception.getMessage() == null
+                        ? "No se pudo guardar el servicio." : exception.getMessage()));
+            }
+        });
+    }
+
+    void updateServiceStatus(String token, Servicios service, ServiceActionCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject body = new JSONObject()
+                        .put("idservicio", service.idservicio)
+                        .put("nombre_servicio", service.nombre_servicio)
+                        .put("precio", service.precio)
+                        .put("duracion", service.duracion)
+                        .put("estado", Boolean.TRUE.equals(service.estado))
+                        .put("categoriaServicio", new JSONObject()
+                                .put("idcategoria_servicio", service.idcategoria_servicio));
+                putAuthorizedJson("/servicios/" + service.idservicio, token, body);
+                mainHandler.post(callback::onSuccess);
+            } catch (Exception exception) {
+                Log.e(TAG, "Error actualizando estado del servicio", exception);
+                mainHandler.post(() -> callback.onError(exception.getMessage() == null
+                        ? "No se pudo actualizar el estado del servicio." : exception.getMessage()));
+            }
+        });
+    }
+
+    void deleteService(String token, long serviceId, ServiceActionCallback callback) {
+        executor.execute(() -> {
+            try {
+                HttpURLConnection connection = openConnection("/servicios/" + serviceId, "DELETE");
+                connection.setRequestProperty("Authorization", "Bearer " + token);
+                int statusCode = connection.getResponseCode();
+                String responseBody = readBody(connection, statusCode);
+                if (statusCode < 200 || statusCode >= 300) {
+                    throw new IOException("HTTP " + statusCode + ": " + responseBody);
+                }
+                mainHandler.post(callback::onSuccess);
+            } catch (Exception exception) {
+                Log.e(TAG, "Error eliminando servicio", exception);
+                mainHandler.post(() -> callback.onError(exception.getMessage() == null
+                        ? "No se pudo eliminar el servicio." : exception.getMessage()));
+            }
+        });
+    }
+
+    void saveSpecialty(String token, boolean editing, CategoriaServicio specialty,
+            SpecialtyFormCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject body = new JSONObject().put("nombre", specialty.nombre);
+                JSONObject response;
+                if (editing) {
+                    body.put("idcategoria_servicio", specialty.idcategoria_servicio);
+                    response = putAuthorizedJson("/categorias-servicio/"
+                            + specialty.idcategoria_servicio, token, body);
+                } else {
+                    response = postAuthorizedJson("/categorias-servicio", token, body);
+                }
+                CategoriaServicio saved = new CategoriaServicio();
+                saved.idcategoria_servicio = firstLong(response,
+                        "idcategoria_servicio", "idCategoriaServicio");
+                if (saved.idcategoria_servicio <= 0L) {
+                    saved.idcategoria_servicio = specialty.idcategoria_servicio;
+                }
+                saved.nombre = response.optString("nombre", specialty.nombre);
+                mainHandler.post(() -> callback.onSuccess(saved));
+            } catch (Exception exception) {
+                Log.e(TAG, "Error guardando especialidad", exception);
+                mainHandler.post(() -> callback.onError(exception.getMessage() == null
+                        ? "No se pudo guardar la especialidad." : exception.getMessage()));
+            }
+        });
+    }
+
+    void deleteSpecialty(String token, long specialtyId, ServiceActionCallback callback) {
+        executor.execute(() -> {
+            try {
+                HttpURLConnection connection = openConnection(
+                        "/categorias-servicio/" + specialtyId, "DELETE");
+                connection.setRequestProperty("Authorization", "Bearer " + token);
+                int statusCode = connection.getResponseCode();
+                String responseBody = readBody(connection, statusCode);
+                if (statusCode < 200 || statusCode >= 300) {
+                    throw new IOException("HTTP " + statusCode + ": " + responseBody);
+                }
+                mainHandler.post(callback::onSuccess);
+            } catch (Exception exception) {
+                Log.e(TAG, "Error eliminando especialidad", exception);
+                mainHandler.post(() -> callback.onError(exception.getMessage() == null
+                        ? "No se pudo eliminar la especialidad." : exception.getMessage()));
+            }
+        });
+    }
+
     private JSONObject getAuthorizedJson(String path, String token) throws IOException {
         HttpURLConnection connection = openConnection(path, "GET");
         connection.setRequestProperty("Authorization", "Bearer " + token);
@@ -271,6 +521,23 @@ final class AuthApiClient {
     private JSONObject putAuthorizedJson(String path, String token, JSONObject body)
             throws IOException {
         HttpURLConnection connection = openConnection(path, "PUT");
+        connection.setRequestProperty("Authorization", "Bearer " + token);
+        writeBody(connection, body.toString());
+        int statusCode = connection.getResponseCode();
+        String responseBody = readBody(connection, statusCode);
+        if (statusCode < 200 || statusCode >= 300) {
+            throw new IOException("HTTP " + statusCode + ": " + responseBody);
+        }
+        try {
+            return responseBody.isEmpty() ? new JSONObject() : new JSONObject(responseBody);
+        } catch (org.json.JSONException exception) {
+            throw new IOException("La API devolvió un JSON inválido.", exception);
+        }
+    }
+
+    private JSONObject postAuthorizedJson(String path, String token, JSONObject body)
+            throws IOException {
+        HttpURLConnection connection = openConnection(path, "POST");
         connection.setRequestProperty("Authorization", "Bearer " + token);
         writeBody(connection, body.toString());
         int statusCode = connection.getResponseCode();
