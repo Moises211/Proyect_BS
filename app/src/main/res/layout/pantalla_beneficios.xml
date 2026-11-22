@@ -31,12 +31,18 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
     </com.google.android.material.textfield.TextInputLayout>
-    <include android:id="@+id/benefit_client_one" layout="@layout/item_admin_benefit_client" />
-    <include android:id="@+id/benefit_client_two" layout="@layout/item_admin_benefit_client" />
-    <include android:id="@+id/benefit_client_three" layout="@layout/item_admin_benefit_client" />
-    <Space
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:paddingTop="8dp"
+        android:paddingBottom="12dp"
+        android:scrollbars="none">
+        <LinearLayout
+            android:id="@+id/benefits_clients_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
     <include layout="@layout/admin_bottom_navigation" />
 </LinearLayout>

@@ -17,6 +17,7 @@
         android:gravity="center_vertical"
         android:padding="12dp">
         <TextView
+            android:id="@+id/client_avatar"
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:background="@drawable/bg_module_clients"
@@ -31,6 +32,7 @@
             android:layout_weight="1"
             android:orientation="vertical">
             <TextView
+                android:id="@+id/client_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Juan Carlos Canales"
@@ -38,6 +40,7 @@
                 android:textSize="16sp"
                 android:textStyle="bold" />
             <TextView
+                android:id="@+id/client_specialty"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:drawableStart="@drawable/ic_content_cut"
@@ -47,6 +50,7 @@
                 android:textColor="#C51B20"
                 android:textSize="15sp" />
             <TextView
+                android:id="@+id/client_phone"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:drawableStart="@drawable/ic_phone"
@@ -74,6 +78,7 @@
                     android:src="@drawable/ic_gift"
                     android:tint="#D5A916" />
                 <TextView
+                    android:id="@+id/client_points"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"

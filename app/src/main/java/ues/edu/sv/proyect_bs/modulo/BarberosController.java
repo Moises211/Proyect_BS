@@ -7,6 +7,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.AdapterView;
+import android.widget.Toast;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
@@ -174,59 +175,163 @@ final class BarberosController implements AdminViewController {
                     row == null ? null : row.person,
                     documents, specialties,
                     (names, lastNames, documentId, document, email, phone, password,
-                            specialtyId) -> {
-                        String token = SessionManager.getToken(host);
-                        apiClient.saveBarber(token, row != null, 
-                                row == null ? 0L : row.barber.idbarberos,
-                                row == null || row.person == null ? 0L : row.person.idpersona,
-                                documentId, specialtyId, names, lastNames, document, email, phone,
-                                password, new AuthApiClient.BarberFormCallback() {
-                                    @Override
-                                    public void onSuccess(long barberId, long personId) {
-                                        executor.execute(() -> {
-                                            Persona savedPerson = row == null
-                                                    ? new Persona() : row.person;
-                                            Barberos savedBarber = row == null
-                                                    ? new Barberos() : row.barber;
-                                            savedPerson.idpersona = personId;
-                                            savedPerson.nombres = names;
-                                            savedPerson.apellidos = lastNames;
-                                            savedPerson.iddocumento = documentId;
-                                            savedPerson.identificadordoc = document;
-                                            savedPerson.correo_electronico = email;
-                                            savedPerson.numero_celular = phone;
-                                            savedBarber.idbarberos = barberId;
-                                            savedBarber.idpersona = personId;
-                                            savedBarber.correo_electronico = email;
-                                            savedBarber.especialidad = specialtyId;
-                                            savedBarber.estado = row == null
-                                                    ? Boolean.TRUE : row.barber.estado;
-                                            database.personaDAO().insertar(savedPerson);
-                                            database.barberosDAO().insertar(savedBarber);
-                                            CategoriaServicio savedSpecialty =
-                                                    database.categoriaServicioDAO()
-                                                            .obtenerPorId(specialtyId);
-                                            host.runOnUiThread(() -> {
-                                                if (row == null) {
-                                                    rows.add(new BarberRow(savedBarber, savedPerson,
-                                                            savedSpecialty));
-                                                } else {
-                                                    row.category = savedSpecialty;
-                                                }
-                                                render();
-                                            });
-                                        });
-                                    }
+                            birthDate, salary, active, specialtyId) -> {
+                        executor.execute(() -> {
+                            boolean editing = row != null;
+                            String originalEmail = editing
+                                    ? row.person.correo_electronico
+                                    : "";
+                            Persona localPerson = row == null
+                                    ? new Persona() : new Persona();
+                            Barberos localBarber = row == null
+                                    ? new Barberos() : new Barberos();
+                            if (editing) {
+                                localPerson.idpersona = row.person.idpersona;
+                                localBarber.idbarberos = row.barber.idbarberos;
+                                localBarber.estado = active;
+                            } else {
+                                localPerson.idpersona = nextTemporaryPersonId();
+                                localBarber.idbarberos = nextTemporaryBarberId();
+                                localBarber.estado = active;
+                            }
+                            localPerson.nombres = names;
+                            localPerson.apellidos = lastNames;
+                            localPerson.iddocumento = documentId;
+                            localPerson.identificadordoc = document;
+                            localPerson.correo_electronico = email;
+                            localPerson.numero_celular = phone;
+                            localPerson.fecha_nacimiento = toApiBirthDate(birthDate);
+                            localBarber.idpersona = localPerson.idpersona;
+                            localBarber.correo_electronico = email;
+                            localBarber.especialidad = specialtyId;
+                            localBarber.salario = salary;
+                            if (editing) {
+                                localBarber.foto_perfil = row.barber.foto_perfil;
+                            }
+                            database.personaDAO().insertar(localPerson);
+                            database.barberosDAO().insertar(localBarber);
 
-                                    @Override
-                                    public void onError(String message) {
-                                        host.createLightDialogBuilder()
-                                                .setTitle("No se pudo guardar")
-                                                .setMessage(message)
-                                                .setPositiveButton("Aceptar", null)
-                                                .show();
-                                    }
-                                });
+                            try {
+                                if (editing) {
+                                    database.operacionPendienteDAO().eliminarPorOperacion(
+                                            "barbero", "POST", localBarber.idbarberos);
+                                }
+                                org.json.JSONObject payload = new org.json.JSONObject()
+                                        .put("barberId", localBarber.idbarberos)
+                                        .put("personId", localPerson.idpersona)
+                                        .put("documentId", documentId)
+                                        .put("specialtyId", specialtyId)
+                                        .put("names", names)
+                                        .put("lastNames", lastNames)
+                                        .put("document", document)
+                                        .put("email", email)
+                                        .put("originalEmail", originalEmail)
+                                        .put("phone", phone)
+                                        .put("birthDate", toApiBirthDate(birthDate))
+                                        .put("salary", salary)
+                                        .put("estado", active)
+                                        .put("password", password);
+                                OperacionesPendientes.guardarJson(host, "barbero",
+                                        editing ? "PUT" : "POST",
+                                        localBarber.idbarberos, payload.toString());
+                            } catch (Exception ignored) {
+                            }
+                            CategoriaServicio localSpecialty =
+                                    database.categoriaServicioDAO().obtenerPorId(specialtyId);
+                            host.runOnUiThread(() -> {
+                                if (!editing) {
+                                    rows.add(new BarberRow(localBarber, localPerson,
+                                            localSpecialty));
+                                } else {
+                                    row.person.nombres = names;
+                                    row.person.apellidos = lastNames;
+                                    row.person.iddocumento = documentId;
+                                    row.person.identificadordoc = document;
+                                    row.person.correo_electronico = email;
+                                    row.person.numero_celular = phone;
+                                    row.person.fecha_nacimiento = toApiBirthDate(birthDate);
+                                    row.barber.correo_electronico = email;
+                                    row.barber.especialidad = specialtyId;
+                                    row.barber.salario = salary;
+                                    row.barber.estado = active;
+                                    row.category = localSpecialty;
+                                }
+                                render();
+                            });
+
+                            String token = SessionManager.getToken(host);
+                            apiClient.saveBarber(token, editing,
+                                    localBarber.idbarberos, localPerson.idpersona,
+                                    documentId, specialtyId, names, lastNames, document, email,
+                                    originalEmail,
+                                    phone, password, toApiBirthDate(birthDate),
+                                    salary, active, new AuthApiClient.BarberFormCallback() {
+                                        @Override
+                                        public void onSuccess(long barberId, long personId) {
+                                            executor.execute(() -> {
+                                                if (!editing) {
+                                                    Barberos temporaryBarber =
+                                                            database.barberosDAO()
+                                                                    .obtenerPorId(localBarber.idbarberos);
+                                                    Persona temporaryPerson =
+                                                            database.personaDAO()
+                                                                    .obtenerPorId(localPerson.idpersona);
+                                                    if (temporaryBarber != null) {
+                                                        database.barberosDAO().eliminar(temporaryBarber);
+                                                    }
+                                                    if (temporaryPerson != null) {
+                                                        database.personaDAO().eliminar(temporaryPerson);
+                                                    }
+                                                }
+                                                Persona savedPerson = localPerson;
+                                                Barberos savedBarber = localBarber;
+                                                savedPerson.idpersona = personId;
+                                                savedBarber.idbarberos = barberId;
+                                                savedBarber.idpersona = personId;
+                                                database.personaDAO().insertar(savedPerson);
+                                                database.barberosDAO().insertar(savedBarber);
+                                                database.operacionPendienteDAO()
+                                                        .eliminarPorOperacion(
+                                                                "barbero",
+                                                                editing ? "PUT" : "POST",
+                                                                localBarber.idbarberos);
+                                                host.runOnUiThread(() -> {
+                                                    render();
+                                                    Toast.makeText(host,
+                                                            editing
+                                                                    ? "Barbero actualizado correctamente."
+                                                                    : "Barbero agregado correctamente.",
+                                                            Toast.LENGTH_LONG).show();
+                                                });
+                                            });
+                                        }
+
+                                        @Override
+                                        public void onError(String message) {
+                                            host.runOnUiThread(() -> {
+                                                if (message.startsWith("[API]")) {
+                                                    executor.execute(() -> database.operacionPendienteDAO()
+                                                            .eliminarPorOperacion(
+                                                                    "barbero",
+                                                                    editing ? "PUT" : "POST",
+                                                                    localBarber.idbarberos));
+                                                    host.createLightDialogBuilder()
+                                                            .setTitle("Error al guardar")
+                                                            .setMessage(message.substring(5).trim())
+                                                            .setPositiveButton("Aceptar", null)
+                                                            .show();
+                                                } else {
+                                                    host.createLightDialogBuilder()
+                                                            .setTitle("Guardado local")
+                                                            .setMessage(message
+                                                                    + "\n\nEl cambio quedó pendiente y se enviará cuando haya conexión.")
+                                                            .setPositiveButton("Aceptar", null)
+                                                            .show();
+                                                }
+                                            });
+                                        }
+                                    });
+                        });
                     }));
         });
     }
@@ -249,32 +354,39 @@ final class BarberosController implements AdminViewController {
                     Boolean previousState = row.barber.estado;
                     row.barber.estado = newState;
                     String token = SessionManager.getToken(host);
+                    executor.execute(() -> {
+                        database.barberosDAO().actualizar(row.barber);
+                        OperacionesPendientes.guardar(host, "barbero",
+                                "PUT", row.barber.idbarberos, row.barber);
+                    });
+                    host.runOnUiThread(() -> {
+                        active.setOnCheckedChangeListener((button, checked) ->
+                                showStatusConfirmation(row, item, active, checked));
+                        render();
+                    });
                     apiClient.updateBarberStatus(token, row.barber,
                             new AuthApiClient.BarberStatusCallback() {
                                 @Override
                                 public void onSuccess() {
                                     executor.execute(() -> {
-                                        database.barberosDAO().actualizar(row.barber);
-                                        host.runOnUiThread(() -> {
-                                            active.setOnCheckedChangeListener((button, checked) ->
-                                                    showStatusConfirmation(row, item, active, checked));
-                                            render();
-                                        });
+                                        database.operacionPendienteDAO()
+                                                .eliminarPorOperacion(
+                                                        "barbero", "PUT",
+                                                        row.barber.idbarberos);
                                     });
+                                    host.runOnUiThread(() -> Toast.makeText(host,
+                                            "Estado del barbero actualizado correctamente.",
+                                            Toast.LENGTH_LONG).show());
                                 }
 
                                 @Override
                                 public void onError(String message) {
-                                    row.barber.estado = previousState;
-                                    active.setOnCheckedChangeListener(null);
-                                    active.setChecked(Boolean.TRUE.equals(previousState));
-                                    active.setOnCheckedChangeListener((button, checked) ->
-                                            showStatusConfirmation(row, item, active, checked));
-                                    host.createLightDialogBuilder()
-                                            .setTitle("No se pudo actualizar")
-                                            .setMessage(message)
-                                            .setPositiveButton("Aceptar", null)
-                                            .show();
+                                    host.runOnUiThread(() ->
+                                            host.createLightDialogBuilder()
+                                                    .setTitle("Guardado local")
+                                                    .setMessage("El cambio quedó pendiente y se enviará cuando vuelva la conexión.")
+                                                    .setPositiveButton("Aceptar", null)
+                                                    .show());
                                 }
                             });
                 })
@@ -320,8 +432,39 @@ final class BarberosController implements AdminViewController {
         return (first + last).toUpperCase(Locale.ROOT);
     }
 
+    private long nextTemporaryPersonId() {
+        long minimum = -1L;
+        for (BarberRow row : rows) {
+            if (row.person != null && row.person.idpersona < minimum) {
+                minimum = row.person.idpersona;
+            }
+        }
+        return minimum - 1L;
+    }
+
+    private long nextTemporaryBarberId() {
+        long minimum = -1L;
+        for (BarberRow row : rows) {
+            if (row.barber != null && row.barber.idbarberos < minimum) {
+                minimum = row.barber.idbarberos;
+            }
+        }
+        return minimum - 1L;
+    }
+
     private String safe(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String toApiBirthDate(String value) {
+        if (value == null) {
+            return "";
+        }
+        String[] parts = value.trim().split("/");
+        if (parts.length == 3) {
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+        return value.trim();
     }
 
     private static final class BarberRow {

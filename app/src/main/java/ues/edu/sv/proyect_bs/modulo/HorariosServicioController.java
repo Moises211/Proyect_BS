@@ -29,6 +29,7 @@ final class HorariosServicioController implements AdminViewController {
         host.configureDailyShiftActions(R.id.service_daily_shift_four);
         host.configureDailyShiftActions(R.id.service_daily_shift_five);
         host.configureDailyShiftActions(R.id.service_daily_shift_six);
-        host.setDisabledCard(R.id.service_daily_shift_two, R.id.daily_shift_active);
+        host.configureDailyShiftActions(R.id.service_daily_shift_seven);
+        host.refreshSelectedWeek();
     }
 }

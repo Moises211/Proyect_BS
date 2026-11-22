@@ -38,12 +38,13 @@
         android:layout_marginHorizontal="28dp"
         android:orientation="horizontal">
         <TextView
+            android:id="@+id/clients_active_count"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@drawable/bg_filter_active_top"
             android:gravity="center"
-            android:text="items 3"
+            android:text="Activos  0/0"
             android:textColor="@android:color/white"
             android:textSize="16sp" />
         <Spinner
@@ -61,13 +62,10 @@
         android:layout_weight="1"
         android:padding="12dp">
         <LinearLayout
+            android:id="@+id/clients_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
-            <include android:id="@+id/client_item_one" layout="@layout/item_admin_client" />
-            <include android:id="@+id/client_item_two" layout="@layout/item_admin_client" />
-            <include android:id="@+id/client_item_three" layout="@layout/item_admin_client" />
-        </LinearLayout>
+            android:orientation="vertical" />
     </ScrollView>
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/action_add_client"

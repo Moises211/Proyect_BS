@@ -8,5 +8,7 @@ import java.util.List;
     @Update void actualizar(HorarioAtencionDiario value);
     @Delete void eliminar(HorarioAtencionDiario value);
     @Query("SELECT * FROM horarioatenciondiario") List<HorarioAtencionDiario> obtenerTodos();
+    @Query("SELECT * FROM horarioatenciondiario WHERE fecha BETWEEN :desde AND :hasta")
+    List<HorarioAtencionDiario> obtenerEntreFechas(String desde, String hasta);
     @Query("SELECT * FROM horarioatenciondiario WHERE idhorarioatenciondiario = :id LIMIT 1") HorarioAtencionDiario obtenerPorId(long id);
 }

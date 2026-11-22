@@ -164,33 +164,34 @@ final class AdministracionServiciosController implements AdminViewController {
                 .setPositiveButton("Confirmar", (dialog, which) -> {
                     Boolean previousState = service.estado;
                     service.estado = newState;
+                    executor.execute(() -> {
+                        database.serviciosDAO().actualizar(service);
+                        OperacionesPendientes.guardar(host, "servicio",
+                                "PUT", service.idservicio, service);
+                    });
+                    host.runOnUiThread(() -> {
+                        active.setOnCheckedChangeListener((button, checked) ->
+                                showStatusConfirmation(service, item, active, checked));
+                        render();
+                    });
                     apiClient.updateServiceStatus(SessionManager.getToken(host), service,
                             new AuthApiClient.ServiceActionCallback() {
                                 @Override
                                 public void onSuccess() {
                                     executor.execute(() -> {
-                                        database.serviciosDAO().actualizar(service);
-                                        host.runOnUiThread(() -> {
-                                            active.setOnCheckedChangeListener((button, checked) ->
-                                                    showStatusConfirmation(service, item,
-                                                            active, checked));
-                                            render();
-                                        });
+                                        database.operacionPendienteDAO().eliminarPorOperacion(
+                                                "servicio", "PUT", service.idservicio);
                                     });
                                 }
 
                                 @Override
                                 public void onError(String message) {
-                                    service.estado = previousState;
-                                    active.setOnCheckedChangeListener(null);
-                                    active.setChecked(Boolean.TRUE.equals(previousState));
-                                    active.setOnCheckedChangeListener((button, checked) ->
-                                            showStatusConfirmation(service, item, active, checked));
-                                    host.createLightDialogBuilder()
-                                            .setTitle("No se pudo actualizar")
-                                            .setMessage(message)
-                                            .setPositiveButton("Aceptar", null)
-                                            .show();
+                                    host.runOnUiThread(() ->
+                                            host.createLightDialogBuilder()
+                                                    .setTitle("Guardado local")
+                                                    .setMessage("El cambio quedó pendiente y se enviará cuando vuelva la conexión.")
+                                                    .setPositiveButton("Aceptar", null)
+                                                    .show());
                                 }
                             });
                 })
@@ -202,30 +203,39 @@ final class AdministracionServiciosController implements AdminViewController {
                 .setTitle("Eliminar servicio")
                 .setMessage("¿Estás seguro de que quieres eliminar este servicio?")
                 .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Eliminar", (dialog, which) ->
-                        apiClient.deleteService(SessionManager.getToken(host),
-                                service.idservicio,
-                                new AuthApiClient.ServiceActionCallback() {
-                                    @Override
-                                    public void onSuccess() {
-                                        executor.execute(() -> {
-                                            database.serviciosDAO().eliminar(service);
-                                            host.runOnUiThread(() -> {
-                                                rows.remove(service);
-                                                render();
-                                            });
-                                        });
-                                    }
+                .setPositiveButton("Eliminar", (dialog, which) -> {
+                    executor.execute(() -> {
+                        database.serviciosDAO().eliminar(service);
+                        OperacionesPendientes.guardar(host, "servicio",
+                                "DELETE", service.idservicio, null);
+                        host.runOnUiThread(() -> {
+                            rows.remove(service);
+                            render();
+                        });
+                    });
+                    apiClient.deleteService(SessionManager.getToken(host),
+                            service.idservicio,
+                            new AuthApiClient.ServiceActionCallback() {
+                                @Override
+                                public void onSuccess() {
+                                    executor.execute(() ->
+                                            database.operacionPendienteDAO()
+                                                    .eliminarPorOperacion(
+                                                            "servicio", "DELETE",
+                                                            service.idservicio));
+                                }
 
-                                    @Override
-                                    public void onError(String message) {
-                                        host.createLightDialogBuilder()
-                                                .setTitle("No se pudo eliminar")
-                                                .setMessage(message)
-                                                .setPositiveButton("Aceptar", null)
-                                                .show();
-                                    }
-                                }))
+                                @Override
+                                public void onError(String message) {
+                                    host.runOnUiThread(() ->
+                                            host.createLightDialogBuilder()
+                                                    .setTitle("Guardado local")
+                                                    .setMessage("Se eliminará en la API cuando vuelva la conexión.")
+                                                    .setPositiveButton("Aceptar", null)
+                                                    .show());
+                                }
+                            });
+                })
                 .show();
     }
 
@@ -249,33 +259,91 @@ final class AdministracionServiciosController implements AdminViewController {
                     database.categoriaServicioDAO().obtenerTodos();
             host.runOnUiThread(() -> host.showServiceForm(service != null, service, categories,
                     value -> {
-                        String token = SessionManager.getToken(host);
-                        apiClient.saveService(token, service != null, value,
-                                new AuthApiClient.ServiceFormCallback() {
-                                    @Override
-                                    public void onSuccess(Servicios saved) {
-                                        executor.execute(() -> {
-                                            database.serviciosDAO().insertar(saved);
-                                            host.runOnUiThread(() -> {
-                                                if (service == null) {
-                                                    rows.add(saved);
-                                                }
-                                                render();
-                                            });
-                                        });
+                            executor.execute(() -> {
+                                boolean editing = service != null;
+                                Servicios local = new Servicios();
+                                if (editing) {
+                                    local.idservicio = service.idservicio;
+                                } else {
+                                    local.idservicio = nextTemporaryServiceId();
+                                }
+                                local.nombre_servicio = value.nombre_servicio;
+                                local.precio = value.precio;
+                                local.duracion = value.duracion;
+                                local.estado = value.estado;
+                                local.idcategoria_servicio = value.idcategoria_servicio;
+                                database.serviciosDAO().insertar(local);
+                                OperacionesPendientes.guardar(host, "servicio",
+                                        editing ? "PUT" : "POST", local.idservicio, local);
+                                host.runOnUiThread(() -> {
+                                    if (!editing) {
+                                        rows.add(local);
+                                    } else {
+                                        int index = rows.indexOf(service);
+                                        if (index >= 0) {
+                                            rows.set(index, local);
+                                        }
                                     }
-
-                                    @Override
-                                    public void onError(String message) {
-                                        host.createLightDialogBuilder()
-                                                .setTitle("No se pudo guardar")
-                                                .setMessage(message)
-                                                .setPositiveButton("Aceptar", null)
-                                                .show();
-                                    }
+                                    render();
                                 });
+
+                                apiClient.saveService(SessionManager.getToken(host),
+                                        editing, local, new AuthApiClient.ServiceFormCallback() {
+                                            @Override
+                                            public void onSuccess(Servicios saved) {
+                                                executor.execute(() -> {
+                                                    if (!editing) {
+                                                        Servicios temporary =
+                                                                database.serviciosDAO()
+                                                                        .obtenerPorId(local.idservicio);
+                                                        if (temporary != null) {
+                                                            database.serviciosDAO().eliminar(temporary);
+                                                        }
+                                                    }
+                                                    database.serviciosDAO().insertar(saved);
+                                                    database.operacionPendienteDAO()
+                                                            .eliminarPorOperacion(
+                                                                    "servicio",
+                                                                    editing ? "PUT" : "POST",
+                                                                    local.idservicio);
+                                                    host.runOnUiThread(() -> {
+                                                        if (!editing) {
+                                                            rows.remove(local);
+                                                            rows.add(saved);
+                                                        } else {
+                                                            int index = rows.indexOf(local);
+                                                            if (index >= 0) {
+                                                                rows.set(index, saved);
+                                                            }
+                                                        }
+                                                        render();
+                                                    });
+                                                });
+                                            }
+
+                                            @Override
+                                            public void onError(String message) {
+                                                host.runOnUiThread(() ->
+                                                        host.createLightDialogBuilder()
+                                                                .setTitle("Guardado local")
+                                                                .setMessage("El cambio quedó pendiente y se enviará cuando vuelva la conexión.")
+                                                                .setPositiveButton("Aceptar", null)
+                                                                .show());
+                                            }
+                                        });
+                            });
                     }));
         });
+    }
+
+    private long nextTemporaryServiceId() {
+        long minimum = -1L;
+        for (Servicios row : rows) {
+            if (row.idservicio < minimum) {
+                minimum = row.idservicio;
+            }
+        }
+        return minimum - 1L;
     }
 
     private boolean matches(Servicios service) {

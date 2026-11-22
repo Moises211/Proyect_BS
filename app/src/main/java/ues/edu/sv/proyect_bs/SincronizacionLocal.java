@@ -11,6 +11,8 @@ import org.json.JSONObject;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import ues.edu.sv.proyect_bs.data.AppDB;
 import ues.edu.sv.proyect_bs.modelos.*;
@@ -62,6 +64,7 @@ final class SincronizacionLocal {
             correctos += sync("/turnos-base-barbero", token, this::saveTurnosBarbero);
             correctos += sync("/turnos-base", token, this::saveTurnos);
             fallidos = 20 - correctos;
+            replayPendingOperations(token);
             int ok = correctos;
             int failed = fallidos;
             mainHandler.post(() -> callback.onComplete(ok, failed));
@@ -91,6 +94,359 @@ final class SincronizacionLocal {
             Log.w(TAG, "No se pudo sincronizar " + path, exception);
             return 0;
         }
+    }
+
+    private void replayPendingOperations(String token) {
+        java.util.List<OperacionPendiente> pending =
+                database.operacionPendienteDAO().obtenerPendientes();
+        for (OperacionPendiente operation : pending) {
+            boolean completed = replayOperation(operation, token);
+            if (completed) {
+                database.operacionPendienteDAO().eliminarPorId(operation.id);
+            } else {
+                operation.intentos++;
+                database.operacionPendienteDAO().actualizar(operation);
+            }
+        }
+    }
+
+    private boolean replayOperation(OperacionPendiente operation, String token) {
+        try {
+            JSONObject payload = operation.payload == null
+                    ? new JSONObject() : new JSONObject(operation.payload);
+            CountDownLatch latch = new CountDownLatch(1);
+            final boolean[] success = {false};
+
+            if ("categoria_servicio".equals(operation.recurso)) {
+                if ("DELETE".equals(operation.metodo)) {
+                    apiClient.deleteSpecialty(token, operation.registroId,
+                            actionCallback(latch, success));
+                } else {
+                    CategoriaServicio value = gson.fromJson(
+                            operation.payload, CategoriaServicio.class);
+                    boolean editing = "PUT".equals(operation.metodo);
+                    apiClient.saveSpecialty(token, editing, value,
+                            new AuthApiClient.SpecialtyFormCallback() {
+                                @Override
+                                public void onSuccess(CategoriaServicio saved) {
+                                    executor.execute(() -> {
+                                        if (!editing) {
+                                            CategoriaServicio temporary =
+                                                    database.categoriaServicioDAO()
+                                                            .obtenerPorId(operation.registroId);
+                                            if (temporary != null) {
+                                                database.categoriaServicioDAO().eliminar(temporary);
+                                            }
+                                        }
+                                        database.categoriaServicioDAO().insertar(saved);
+                                    });
+                                    success[0] = true;
+                                    latch.countDown();
+                                }
+
+                                @Override
+                                public void onError(String message) {
+                                    latch.countDown();
+                                }
+                            });
+                }
+            } else if ("servicio".equals(operation.recurso)) {
+                if ("DELETE".equals(operation.metodo)) {
+                    apiClient.deleteService(token, operation.registroId,
+                            actionCallback(latch, success));
+                } else {
+                    Servicios value = gson.fromJson(operation.payload, Servicios.class);
+                    boolean editing = "PUT".equals(operation.metodo);
+                    apiClient.saveService(token, editing, value,
+                            new AuthApiClient.ServiceFormCallback() {
+                                @Override
+                                public void onSuccess(Servicios saved) {
+                                    executor.execute(() -> {
+                                        if (!editing) {
+                                            Servicios temporary =
+                                                    database.serviciosDAO()
+                                                            .obtenerPorId(operation.registroId);
+                                            if (temporary != null) {
+                                                database.serviciosDAO().eliminar(temporary);
+                                            }
+                                        }
+                                        database.serviciosDAO().insertar(saved);
+                                    });
+                                    success[0] = true;
+                                    latch.countDown();
+                                }
+
+                                @Override
+                                public void onError(String message) {
+                                    latch.countDown();
+                                }
+                            });
+                }
+            } else if ("beneficio".equals(operation.recurso)) {
+                if ("DELETE".equals(operation.metodo)) {
+                    apiClient.deleteBenefit(token, operation.registroId,
+                            benefitActionCallback(latch, success));
+                } else {
+                    Beneficios value = gson.fromJson(operation.payload, Beneficios.class);
+                    boolean editing = "PUT".equals(operation.metodo);
+                    apiClient.saveBenefit(token, editing, value,
+                            new AuthApiClient.BenefitFormCallback() {
+                                @Override
+                                public void onSuccess(Beneficios saved) {
+                                    executor.execute(() -> {
+                                        if (!editing) {
+                                            Beneficios temporary =
+                                                    database.beneficiosDAO()
+                                                            .obtenerPorId(operation.registroId);
+                                            if (temporary != null) {
+                                                database.beneficiosDAO().eliminar(temporary);
+                                            }
+                                        }
+                                        database.beneficiosDAO().insertar(saved);
+                                    });
+                                    success[0] = true;
+                                    latch.countDown();
+                                }
+
+                                @Override
+                                public void onError(String message) {
+                                    latch.countDown();
+                                }
+                            });
+                }
+            } else if ("horario_dia_base".equals(operation.recurso)) {
+                HorarioDiaBase value =
+                        gson.fromJson(operation.payload, HorarioDiaBase.class);
+                apiClient.saveBaseScheduleDay(token, value,
+                        new AuthApiClient.BaseScheduleCallback() {
+                            @Override
+                            public void onSuccess(HorarioDiaBase saved) {
+                                executor.execute(() ->
+                                        database.horarioDiaBaseDAO().actualizar(saved));
+                                success[0] = true;
+                                latch.countDown();
+                            }
+
+                            @Override
+                            public void onError(String message) {
+                                latch.countDown();
+                            }
+                        });
+            } else if ("beneficio_cliente".equals(operation.recurso)) {
+                if ("DELETE".equals(operation.metodo)) {
+                    apiClient.deleteBenefitClient(token, operation.registroId,
+                            benefitActionCallback(latch, success));
+                } else {
+                    BeneficiosCliente value =
+                            gson.fromJson(operation.payload, BeneficiosCliente.class);
+                    apiClient.saveBenefitClient(token, value,
+                            new AuthApiClient.BenefitClientFormCallback() {
+                                @Override
+                                public void onSuccess(BeneficiosCliente saved) {
+                                    executor.execute(() -> {
+                                        BeneficiosCliente temporary =
+                                                database.beneficiosClienteDAO()
+                                                        .obtenerPorId(operation.registroId);
+                                        if (temporary != null) {
+                                            database.beneficiosClienteDAO().eliminar(temporary);
+                                        }
+                                        database.beneficiosClienteDAO().insertar(saved);
+                                    });
+                                    success[0] = true;
+                                    latch.countDown();
+                                }
+
+                                @Override
+                                public void onError(String message) {
+                                    latch.countDown();
+                                }
+                            });
+                }
+            } else if ("cliente".equals(operation.recurso)) {
+                if ("DELETE".equals(operation.metodo)) {
+                    apiClient.deleteClient(token, operation.registroId,
+                            actionCallback(latch, success));
+                } else if ("PUT".equals(operation.metodo)
+                        && payload.has("statusOnly")) {
+                    Cliente client = gson.fromJson(operation.payload, Cliente.class);
+                    apiClient.updateClientStatus(token, client,
+                            actionCallback(latch, success));
+                } else {
+                    boolean editing = "PUT".equals(operation.metodo);
+                    apiClient.saveClient(token, editing,
+                            payload.optLong("clientId", operation.registroId),
+                            payload.optLong("personId", 0L),
+                            payload.optLong("documentId"), payload.optLong("specialtyId"),
+                            payload.optString("names"), payload.optString("lastNames"),
+                            payload.optString("document"), payload.optString("email"),
+                            payload.optString("phone"), payload.optString("birthDate"),
+                            payload.optString("password"),
+                            payload.optBoolean("estado", true),
+                            new AuthApiClient.ClientFormCallback() {
+                                @Override
+                                public void onSuccess(long clientId, long personId) {
+                                    executor.execute(() -> {
+                                        if (!editing) {
+                                            Cliente temporary = database.clienteDAO()
+                                                    .obtenerPorId(operation.registroId);
+                                            Persona temporaryPerson = database.personaDAO()
+                                                    .obtenerPorId(payload.optLong("personId", 0L));
+                                            if (temporary != null) {
+                                                database.clienteDAO().eliminar(temporary);
+                                            }
+                                            if (temporaryPerson != null) {
+                                                database.personaDAO().eliminar(temporaryPerson);
+                                            }
+                                        }
+                                        Persona person = new Persona();
+                                        person.idpersona = personId;
+                                        person.nombres = payload.optString("names");
+                                        person.apellidos = payload.optString("lastNames");
+                                        person.identificadordoc = payload.optString("document");
+                                        person.correo_electronico = payload.optString("email");
+                                        person.numero_celular = payload.optString("phone");
+                                        person.correo_electronico = payload.optString("email");
+                                        person.fecha_nacimiento = payload.optString("birthDate");
+                                        person.iddocumento = payload.optLong("documentId");
+                                        Cliente client = new Cliente();
+                                        client.idcliente = clientId;
+                                        client.idpersona = personId;
+                                        client.preferencia_especialidad =
+                                                payload.optLong("specialtyId");
+                                        client.estado = payload.optBoolean("estado", true);
+                                        database.personaDAO().insertar(person);
+                                        database.clienteDAO().insertar(client);
+                                    });
+                                    success[0] = true;
+                                    latch.countDown();
+                                }
+
+                                @Override
+                                public void onError(String message) {
+                                    latch.countDown();
+                                }
+                            });
+                }
+            } else if ("barbero".equals(operation.recurso)) {
+                if ("DELETE".equals(operation.metodo)) {
+                    success[0] = false;
+                    latch.countDown();
+                } else if ("PUT".equals(operation.metodo)
+                        && !payload.has("names")) {
+                    Barberos barber = gson.fromJson(operation.payload, Barberos.class);
+                    apiClient.updateBarberStatus(token, barber,
+                            new AuthApiClient.BarberStatusCallback() {
+                                @Override
+                                public void onSuccess() {
+                                    success[0] = true;
+                                    latch.countDown();
+                                }
+
+                                @Override
+                                public void onError(String message) {
+                                    latch.countDown();
+                                }
+                            });
+                } else {
+                    boolean editing = "PUT".equals(operation.metodo);
+                    apiClient.saveBarber(token, editing,
+                            payload.optLong("barberId", operation.registroId),
+                            payload.optLong("personId", 0L),
+                            payload.optLong("documentId"), payload.optLong("specialtyId"),
+                            payload.optString("names"), payload.optString("lastNames"),
+                            payload.optString("document"), payload.optString("email"),
+                            payload.optString("originalEmail",
+                                    payload.optString("email")),
+                            payload.optString("phone"), payload.optString("password"),
+                            payload.optString("birthDate"),
+                            payload.optDouble("salary", 0.0),
+                            payload.optBoolean("estado", true),
+                            new AuthApiClient.BarberFormCallback() {
+                                @Override
+                                public void onSuccess(long barberId, long personId) {
+                                    executor.execute(() -> {
+                                        if (!editing) {
+                                            Barberos temporaryBarber =
+                                                    database.barberosDAO()
+                                                            .obtenerPorId(operation.registroId);
+                                            Persona temporaryPerson =
+                                                    database.personaDAO()
+                                                            .obtenerPorId(payload.optLong("personId", 0L));
+                                            if (temporaryBarber != null) {
+                                                database.barberosDAO().eliminar(temporaryBarber);
+                                            }
+                                            if (temporaryPerson != null) {
+                                                database.personaDAO().eliminar(temporaryPerson);
+                                            }
+                                        }
+                                        Persona person = new Persona();
+                                        person.idpersona = personId;
+                                        person.nombres = payload.optString("names");
+                                        person.apellidos = payload.optString("lastNames");
+                                        person.identificadordoc = payload.optString("document");
+                                        person.numero_celular = payload.optString("phone");
+                                        person.iddocumento = payload.optLong("documentId");
+                                        person.fecha_nacimiento = payload.optString("birthDate");
+                                        Barberos barber = new Barberos();
+                                        barber.idbarberos = barberId;
+                                        barber.idpersona = personId;
+                                        barber.correo_electronico = payload.optString("email");
+                                        barber.especialidad = payload.optLong("specialtyId");
+                                        barber.estado = true;
+                                        database.personaDAO().insertar(person);
+                                        database.barberosDAO().insertar(barber);
+                                    });
+                                    success[0] = true;
+                                    latch.countDown();
+                                }
+
+                                @Override
+                                public void onError(String message) {
+                                    latch.countDown();
+                                }
+                            });
+                }
+            } else {
+                latch.countDown();
+            }
+            latch.await(20, TimeUnit.SECONDS);
+            return success[0];
+        } catch (Exception exception) {
+            Log.w(TAG, "No se pudo reproducir operacion pendiente", exception);
+            return false;
+        }
+    }
+
+    private AuthApiClient.ServiceActionCallback actionCallback(
+            CountDownLatch latch, boolean[] success) {
+        return new AuthApiClient.ServiceActionCallback() {
+            @Override
+            public void onSuccess() {
+                success[0] = true;
+                latch.countDown();
+            }
+
+            @Override
+            public void onError(String message) {
+                latch.countDown();
+            }
+        };
+    }
+
+    private AuthApiClient.BenefitActionCallback benefitActionCallback(
+            CountDownLatch latch, boolean[] success) {
+        return new AuthApiClient.BenefitActionCallback() {
+            @Override
+            public void onSuccess() {
+                success[0] = true;
+                latch.countDown();
+            }
+
+            @Override
+            public void onError(String message) {
+                latch.countDown();
+            }
+        };
     }
 
     private interface ResourceSaver {
@@ -188,7 +544,18 @@ final class SincronizacionLocal {
         for (int i = 0; i < values.length(); i++) {
             JSONObject item = flat(values.optJSONObject(i), "categoriaServicio", "categoria");
             item = flat(item, "servicios", "servicio");
-            database.beneficiosDAO().insertar(parse(item, Beneficios.class));
+            Beneficios server = parse(item, Beneficios.class);
+            if (server.idbeneficio <= 0L) continue;
+            for (Beneficios local : database.beneficiosDAO().obtenerTodos()) {
+                if (local.idbeneficio >= 0L) continue;
+                if (java.util.Objects.equals(local.estado, server.estado)
+                        && java.util.Objects.equals(local.costepuntos, server.costepuntos)
+                        && java.util.Objects.equals(local.categoria, server.categoria)
+                        && java.util.Objects.equals(local.servicio, server.servicio)) {
+                    database.beneficiosDAO().eliminar(local);
+                }
+            }
+            database.beneficiosDAO().insertar(server);
         }
     }
 
@@ -253,9 +620,17 @@ final class SincronizacionLocal {
     }
 
     private void saveTarifas(org.json.JSONArray values) {
+        java.util.Set<Long> serverIds = new java.util.HashSet<>();
         for (int i = 0; i < values.length(); i++) {
-            database.tarifaPuntosDAO().insertar(parse(values.optJSONObject(i),
-                    TarifaPuntos.class));
+            TarifaPuntos server = parse(values.optJSONObject(i),
+                    TarifaPuntos.class);
+            serverIds.add(server.idtarifa);
+            database.tarifaPuntosDAO().insertar(server);
+        }
+        for (TarifaPuntos local : database.tarifaPuntosDAO().obtenerTodos()) {
+            if (!serverIds.contains(local.idtarifa)) {
+                database.tarifaPuntosDAO().eliminar(local);
+            }
         }
     }
 

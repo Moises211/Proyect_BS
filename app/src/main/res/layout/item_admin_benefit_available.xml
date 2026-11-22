@@ -33,6 +33,7 @@
             android:layout_weight="1"
             android:orientation="vertical">
             <TextView
+                android:id="@+id/benefit_available_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Corte Clasico Barba"
@@ -50,6 +51,7 @@
                     android:src="@drawable/ic_receipt"
                     android:tint="#777777" />
                 <TextView
+                    android:id="@+id/benefit_available_cost"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"

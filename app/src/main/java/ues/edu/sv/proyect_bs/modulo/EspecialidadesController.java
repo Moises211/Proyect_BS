@@ -116,46 +116,95 @@ final class EspecialidadesController implements AdminViewController {
                             .setTitle("Eliminar especialidad")
                             .setMessage("¿Deseas eliminar esta especialidad?")
                             .setNegativeButton("Cancelar", null)
-                            .setPositiveButton("Eliminar", (dialog, which) ->
+                            .setPositiveButton("Eliminar", (dialog, which) -> {
+                                executor.execute(() -> {
+                                    database.categoriaServicioDAO().eliminar(specialty);
+                                    OperacionesPendientes.guardar(host, "categoria_servicio",
+                                            "DELETE", specialty.idcategoria_servicio, null);
+                                    host.runOnUiThread(() -> {
+                                        rows.remove(specialty);
+                                        render();
+                                    });
                                     apiClient.deleteSpecialty(SessionManager.getToken(host),
                                             specialty.idcategoria_servicio,
                                             new AuthApiClient.ServiceActionCallback() {
                                                 @Override
                                                 public void onSuccess() {
-                                                    executor.execute(() -> {
-                                                        database.categoriaServicioDAO()
-                                                                .eliminar(specialty);
-                                                        host.runOnUiThread(() -> {
-                                                            rows.remove(specialty);
-                                                            render();
-                                                        });
-                                                    });
+                                                    executor.execute(() ->
+                                                            database.operacionPendienteDAO()
+                                                                    .eliminarPorOperacion(
+                                                                            "categoria_servicio", "DELETE",
+                                                                            specialty.idcategoria_servicio));
                                                 }
 
                                                 @Override
                                                 public void onError(String message) {
-                                                    host.createLightDialogBuilder()
-                                                            .setTitle("No se pudo eliminar")
-                                                            .setMessage(message)
-                                                            .setPositiveButton("Aceptar", null)
-                                                            .show();
+                                                    host.runOnUiThread(() ->
+                                                            host.createLightDialogBuilder()
+                                                                    .setTitle("Guardado local")
+                                                                    .setMessage("Se eliminará en la API cuando vuelva la conexión.")
+                                                                    .setPositiveButton("Aceptar", null)
+                                                                    .show());
                                                 }
-                                            }))
+                                            });
+                                });
+                            })
                             .show());
         }
     }
 
     private void openSpecialtyForm(CategoriaServicio specialty) {
-        host.showSpecialtyForm(specialty != null, specialty, value ->
-                apiClient.saveSpecialty(SessionManager.getToken(host), specialty != null, value,
+        host.showSpecialtyForm(specialty != null, specialty, value -> {
+            executor.execute(() -> {
+                boolean editing = specialty != null;
+                CategoriaServicio local = new CategoriaServicio();
+                if (editing) {
+                    local.idcategoria_servicio = specialty.idcategoria_servicio;
+                } else {
+                    local.idcategoria_servicio = nextTemporaryId();
+                }
+                local.nombre = value.nombre;
+                database.categoriaServicioDAO().insertar(local);
+                OperacionesPendientes.guardar(host, "categoria_servicio",
+                        editing ? "PUT" : "POST", local.idcategoria_servicio, local);
+                host.runOnUiThread(() -> {
+                    if (!editing) {
+                        rows.add(local);
+                    } else {
+                        int index = rows.indexOf(specialty);
+                        if (index >= 0) {
+                            rows.set(index, local);
+                        }
+                    }
+                    render();
+                });
+                apiClient.saveSpecialty(SessionManager.getToken(host), editing, local,
                         new AuthApiClient.SpecialtyFormCallback() {
                             @Override
                             public void onSuccess(CategoriaServicio saved) {
                                 executor.execute(() -> {
+                                    if (!editing) {
+                                        CategoriaServicio temporary =
+                                                database.categoriaServicioDAO()
+                                                        .obtenerPorId(local.idcategoria_servicio);
+                                        if (temporary != null) {
+                                            database.categoriaServicioDAO().eliminar(temporary);
+                                        }
+                                    }
                                     database.categoriaServicioDAO().insertar(saved);
+                                    database.operacionPendienteDAO().eliminarPorOperacion(
+                                            "categoria_servicio",
+                                            editing ? "PUT" : "POST",
+                                            local.idcategoria_servicio);
                                     host.runOnUiThread(() -> {
-                                        if (specialty == null) {
+                                        if (!editing) {
+                                            rows.remove(local);
                                             rows.add(saved);
+                                        } else {
+                                            int index = rows.indexOf(local);
+                                            if (index >= 0) {
+                                                rows.set(index, saved);
+                                            }
                                         }
                                         render();
                                     });
@@ -164,12 +213,25 @@ final class EspecialidadesController implements AdminViewController {
 
                             @Override
                             public void onError(String message) {
-                                host.createLightDialogBuilder()
-                                        .setTitle("No se pudo guardar")
-                                        .setMessage(message)
-                                        .setPositiveButton("Aceptar", null)
-                                        .show();
+                                host.runOnUiThread(() ->
+                                        host.createLightDialogBuilder()
+                                                .setTitle("Guardado local")
+                                                .setMessage("El cambio quedó pendiente y se enviará cuando vuelva la conexión.")
+                                                .setPositiveButton("Aceptar", null)
+                                                .show());
                             }
-                        }));
+                        });
+            });
+        });
+    }
+
+    private long nextTemporaryId() {
+        long minimum = -1L;
+        for (CategoriaServicio row : rows) {
+            if (row.idcategoria_servicio < minimum) {
+                minimum = row.idcategoria_servicio;
+            }
+        }
+        return minimum - 1L;
     }
 }

@@ -8,6 +8,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Button;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CompoundButton;
@@ -23,11 +24,14 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.textfield.TextInputEditText;
+import ues.edu.sv.proyect_bs.data.AppDB;
+import ues.edu.sv.proyect_bs.modelos.TarifaPuntos;
 
 public class MainActivity extends AppCompatActivity {
     private java.util.Calendar selectedWeekStart;
     private boolean darkMode;
     private AuthApiClient.AdminProfile loadedAdminProfile;
+    private long selectedBenefitClientId;
     private final AdminNavigationController navigationController =
             new AdminNavigationController(this);
     private ImageView promotionImageTarget;
@@ -383,8 +387,6 @@ public class MainActivity extends AppCompatActivity {
     void configureClientActions(int itemId) {
             View item = findViewById(itemId);
             item.setClickable(false);
-            item.findViewById(R.id.action_edit_client).setOnClickListener(v ->
-                    showClientForm(true));
             item.findViewById(R.id.action_client_appointments).setOnClickListener(v ->
                     showScreen(R.layout.pantalla_citas_cliente));
         }
@@ -458,9 +460,116 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void showBaseRateForm() {
-        showStandardForm("Modificar tarifa base", "Guardar",
-                new String[]{"Monto de gasto", "Define cuÃ¡nto gasto representa un punto."},
-                new String[]{"1.00", ""});
+        java.util.concurrent.ExecutorService executor =
+                java.util.concurrent.Executors.newSingleThreadExecutor();
+        AppDB database = AppDB.getInstance(this);
+        executor.execute(() -> {
+            TarifaPuntos selected =
+                    database.tarifaPuntosDAO().obtenerPrimera();
+            if (selected == null) selected = new TarifaPuntos();
+            TarifaPuntos current = selected;
+            if (current.puntos == null) current.puntos = 1;
+            if (current.tarifamonetaria == null) current.tarifamonetaria = 1d;
+            TarifaPuntos modalTariff = current;
+            runOnUiThread(() -> showBaseRateDialog(modalTariff));
+        });
+    }
+
+    private void showBaseRateDialog(TarifaPuntos current) {
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_standard, null);
+        ((TextView) content.findViewById(R.id.modal_admin_title))
+                .setText("Modificar tarifa base");
+        LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
+
+        LinearLayout valuesRow = createClientModalRow(modalContext);
+        EditText points = (EditText) createLabeledClientModalField(
+                modalContext, valuesRow, "Puntos", String.valueOf(current.puntos));
+        points.setHint("Puntos");
+        points.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        EditText rate = (EditText) createLabeledClientModalField(
+                modalContext, valuesRow, "Tarifa",
+                String.format(java.util.Locale.US, "%.2f",
+                        current.tarifamonetaria));
+        rate.setHint("Tarifa");
+        rate.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
+                | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        fields.addView(valuesRow);
+
+        androidx.appcompat.app.AlertDialog dialog =
+                new MaterialAlertDialogBuilder(modalContext)
+                        .setView(content)
+                        .setNegativeButton("Cancelar", null)
+                        .setPositiveButton("Guardar", null)
+                        .create();
+        dialog.setOnShowListener(ignored -> {
+            styleModalButtons(dialog);
+            Button save = dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+            save.setOnClickListener(v -> {
+                if (current.idtarifa <= 0) {
+                    android.widget.Toast.makeText(MainActivity.this,
+                            "No hay una tarifa disponible para actualizar.",
+                            android.widget.Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                int pointsValue;
+                double rateValue;
+                try {
+                    pointsValue = Integer.parseInt(points.getText().toString().trim());
+                    rateValue = Double.parseDouble(rate.getText().toString().trim());
+                    if (pointsValue <= 0 || rateValue <= 0) {
+                        throw new NumberFormatException();
+                    }
+                } catch (NumberFormatException exception) {
+                    android.widget.Toast.makeText(this,
+                            "Ingresa Puntos y Tarifa válidos.",
+                            android.widget.Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                TarifaPuntos updated = new TarifaPuntos();
+                updated.idtarifa = current.idtarifa;
+                updated.puntos = pointsValue;
+                updated.tarifamonetaria = rateValue;
+                save.setEnabled(false);
+                new AuthApiClient().saveBaseRate(
+                        SessionManager.getToken(this), updated,
+                        new AuthApiClient.BaseRateCallback() {
+                            @Override
+                            public void onSuccess(TarifaPuntos savedTariff) {
+                                java.util.concurrent.ExecutorService saveExecutor =
+                                        java.util.concurrent.Executors.newSingleThreadExecutor();
+                                saveExecutor.execute(() -> {
+                                    AppDB.getInstance(MainActivity.this)
+                                            .tarifaPuntosDAO().insertar(savedTariff);
+                                    runOnUiThread(() -> {
+                                        TextView rateView =
+                                                findViewById(R.id.benefit_base_rate);
+                                        if (rateView != null) {
+                                            rateView.setText("Gasto de $" +
+                                                    String.format(java.util.Locale.US,
+                                                            "%.2f", savedTariff.tarifamonetaria)
+                                                    + " = " + savedTariff.puntos + " Pts.");
+                                        }
+                                        dialog.dismiss();
+                                        android.widget.Toast.makeText(MainActivity.this,
+                                                "Tarifa base guardada.",
+                                                android.widget.Toast.LENGTH_SHORT).show();
+                                    });
+                                });
+                            }
+
+                            @Override
+                            public void onError(String message) {
+                                save.setEnabled(true);
+                                android.widget.Toast.makeText(MainActivity.this,
+                                        message, android.widget.Toast.LENGTH_SHORT).show();
+                            }
+                        });
+            });
+        });
+        dialog.show();
     }
 
     void setDisabledCard(int itemId, int switchId) {
@@ -530,7 +639,9 @@ public class MainActivity extends AppCompatActivity {
                 || id == R.id.action_edit_benefit
                 || id == R.id.action_delete_benefit
                 || id == R.id.promotion_active_switch
-                || id == R.id.promotion_image;
+                || id == R.id.promotion_image
+                || id == R.id.action_edit_client
+                || id == R.id.action_client_appointments;
     }
 
     void configureDailyShiftActions(int itemId) {
@@ -541,6 +652,13 @@ public class MainActivity extends AppCompatActivity {
 
     void configureBaseScheduleDay(int itemId, String day, String initial,
                                           String hours, String breakTime) {
+        configureBaseScheduleDay(itemId, day, initial, hours, breakTime, null, null);
+    }
+
+    void configureBaseScheduleDay(int itemId, String day, String initial,
+                                          String hours, String breakTime,
+                                          ues.edu.sv.proyect_bs.modelos.HorarioDiaBase row,
+                                          Runnable onChanged) {
         View item = findViewById(itemId);
         ((android.widget.TextView) item.findViewById(R.id.base_day_name)).setText(day);
         ((android.widget.TextView) item.findViewById(R.id.base_day_avatar)).setText(initial);
@@ -558,8 +676,147 @@ public class MainActivity extends AppCompatActivity {
             breakView.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(
                     android.graphics.Color.rgb(117, 117, 117)));
         }
-        item.findViewById(R.id.action_edit_daily_shift).setOnClickListener(v ->
-                showDailyShiftForm());
+        item.findViewById(R.id.action_edit_daily_shift).setOnClickListener(v -> {
+            if (row == null) {
+                showDailyShiftForm();
+            } else {
+                showBaseScheduleDayForm(row, onChanged);
+            }
+        });
+    }
+
+    private void showBaseScheduleDayForm(
+            ues.edu.sv.proyect_bs.modelos.HorarioDiaBase row,
+            Runnable onChanged) {
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_standard, null);
+        ((TextView) content.findViewById(R.id.modal_admin_title))
+                .setText("Editar jornada - " + row.dia);
+        LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
+
+        LinearLayout timesRow = createClientModalRow(modalContext);
+        EditText opening = (EditText) createLabeledClientModalField(
+                modalContext, timesRow, "Inicio", toDisplayTime(row.apertura));
+        configureModalTimeField(modalContext, opening);
+        EditText closing = (EditText) createLabeledClientModalField(
+                modalContext, timesRow, "Fin", toDisplayTime(row.cierre));
+        configureModalTimeField(modalContext, closing);
+        fields.addView(timesRow);
+
+        LinearLayout recesoHeader = new LinearLayout(modalContext);
+        recesoHeader.setOrientation(LinearLayout.HORIZONTAL);
+        recesoHeader.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        recesoHeader.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        recesoHeader.setPadding(0, dp(8), 0, dp(4));
+
+        TextView recesoLabel = new TextView(modalContext);
+        recesoLabel.setText("Receso");
+        recesoLabel.setTextColor(android.graphics.Color.parseColor("#263248"));
+        recesoLabel.setTextSize(16);
+        LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        recesoHeader.addView(recesoLabel, labelParams);
+
+        SwitchMaterial recesoSwitch = new SwitchMaterial(modalContext);
+        recesoSwitch.setChecked(row.receso);
+        recesoSwitch.setThumbTintList(android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.WHITE));
+        recesoSwitch.setTrackTintList(new android.content.res.ColorStateList(
+                new int[][]{
+                        new int[]{android.R.attr.state_checked},
+                        new int[]{}
+                },
+                new int[]{
+                        android.graphics.Color.parseColor("#287F8D"),
+                        android.graphics.Color.parseColor("#B7BDC5")
+                }));
+        recesoHeader.addView(recesoSwitch);
+        fields.addView(recesoHeader);
+
+        LinearLayout recesoRow = createClientModalRow(modalContext);
+        EditText breakStart = (EditText) createLabeledClientModalField(
+                modalContext, recesoRow, "Inicio Receso", toDisplayTime(row.inicio));
+        configureModalTimeField(modalContext, breakStart);
+        EditText breakEnd = (EditText) createLabeledClientModalField(
+                modalContext, recesoRow, "Fin Receso", toDisplayTime(row.fin));
+        configureModalTimeField(modalContext, breakEnd);
+        fields.addView(recesoRow);
+        recesoRow.setVisibility(row.receso ? View.VISIBLE : View.GONE);
+        recesoSwitch.setOnCheckedChangeListener((button, checked) ->
+                recesoRow.setVisibility(checked ? View.VISIBLE : View.GONE));
+
+        androidx.appcompat.app.AlertDialog dialog =
+                new MaterialAlertDialogBuilder(modalContext)
+                        .setView(content)
+                        .setNegativeButton("Cancelar", null)
+                        .setPositiveButton("Guardar", null)
+                        .create();
+        dialog.setOnShowListener(ignored -> {
+            styleModalButtons(dialog);
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+                        String openingValue = fromDisplayTime(opening.getText().toString());
+                        String closingValue = fromDisplayTime(closing.getText().toString());
+                        String breakStartValue = fromDisplayTime(breakStart.getText().toString());
+                        String breakEndValue = fromDisplayTime(breakEnd.getText().toString());
+                        if (openingValue.isEmpty() || closingValue.isEmpty()) {
+                            showFieldError(opening, "Ingresa el horario de inicio y fin.");
+                            return;
+                        }
+                        boolean hasBreak = recesoSwitch.isChecked();
+                        if (hasBreak
+                                && (breakStartValue.isEmpty() || breakEndValue.isEmpty())) {
+                            showFieldError(breakStart, "Selecciona el inicio y fin del receso.");
+                            return;
+                        }
+                        row.apertura = openingValue;
+                        row.cierre = closingValue;
+                        row.receso = hasBreak;
+                        if (hasBreak) {
+                            row.inicio = breakStartValue;
+                            row.fin = breakEndValue;
+                        }
+                        dialog.dismiss();
+                        if (onChanged != null) onChanged.run();
+                    });
+        });
+        dialog.show();
+    }
+
+    private String toDisplayTime(String value) {
+        if (value == null || value.trim().isEmpty()) return "";
+        String[] parts = value.trim().split(":");
+        if (parts.length < 2) return value;
+        try {
+            int hour = Integer.parseInt(parts[0]);
+            int minute = Integer.parseInt(parts[1]);
+            int displayHour = hour % 12;
+            if (displayHour == 0) displayHour = 12;
+            return String.format(java.util.Locale.US, "%d:%02d %s",
+                    displayHour, minute, hour >= 12 ? "p.m." : "a.m.");
+        } catch (NumberFormatException exception) {
+            return value;
+        }
+    }
+
+    private String fromDisplayTime(String value) {
+        if (value == null) return "";
+        String normalized = value.trim().toLowerCase(java.util.Locale.US)
+                .replace(".", "").replace(" ", "");
+        if (normalized.isEmpty()) return "";
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("(\\d{1,2}):(\\d{2})(am|pm)?")
+                .matcher(normalized);
+        if (!matcher.find()) return "";
+        int hour = Integer.parseInt(matcher.group(1));
+        int minute = Integer.parseInt(matcher.group(2));
+        String suffix = matcher.group(3);
+        if ("pm".equals(suffix) && hour < 12) hour += 12;
+        if ("am".equals(suffix) && hour == 12) hour = 0;
+        return String.format(java.util.Locale.US, "%02d:%02d:00", hour, minute);
     }
 
     void configureSpinner(int viewId, int textColor, String... options) {
@@ -596,21 +853,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void showWeekChangeDialog(int direction) {
-        if (selectedWeekStart == null) {
-            selectedWeekStart = getWeekStart(java.util.Calendar.getInstance());
-        }
+        ensureSelectedWeekStart();
         selectedWeekStart.add(java.util.Calendar.DAY_OF_MONTH, direction * 7);
+        clampSelectedWeekStart();
         updateWeekSelector();
     }
 
     void showWeekCalendar() {
         java.util.Calendar today = java.util.Calendar.getInstance();
+        java.util.Calendar horizonEnd = java.util.Calendar.getInstance();
+        horizonEnd.add(java.util.Calendar.MONTH, 1);
+        horizonEnd.set(java.util.Calendar.DAY_OF_MONTH,
+                horizonEnd.getActualMaximum(java.util.Calendar.DAY_OF_MONTH));
+        java.util.Calendar minimum = getWeekStart(today);
         android.widget.DatePicker datePicker = new android.widget.DatePicker(this);
         datePicker.init(
                 today.get(java.util.Calendar.YEAR),
                 today.get(java.util.Calendar.MONTH),
                 today.get(java.util.Calendar.DAY_OF_MONTH),
                 null);
+        datePicker.setMinDate(minimum.getTimeInMillis());
+        datePicker.setMaxDate(horizonEnd.getTimeInMillis());
 
         androidx.appcompat.app.AlertDialog picker = new MaterialAlertDialogBuilder(this)
                 .setTitle("Seleccionar semana")
@@ -623,6 +886,7 @@ public class MainActivity extends AppCompatActivity {
                             datePicker.getMonth(),
                             datePicker.getDayOfMonth());
                     selectedWeekStart = getWeekStart(selectedDate);
+                    clampSelectedWeekStart();
                     updateWeekSelector();
                 })
                 .create();
@@ -646,6 +910,7 @@ public class MainActivity extends AppCompatActivity {
         if (selectedWeekStart == null) {
             return;
         }
+        clampSelectedWeekStart();
         java.util.Calendar weekEnd = (java.util.Calendar) selectedWeekStart.clone();
         weekEnd.add(java.util.Calendar.DAY_OF_MONTH, 6);
         java.text.SimpleDateFormat format = new java.text.SimpleDateFormat(
@@ -655,23 +920,317 @@ public class MainActivity extends AppCompatActivity {
             weekLabel.setText("Sem " + format.format(selectedWeekStart.getTime())
                     + "-" + format.format(weekEnd.getTime()));
         }
+        refreshSelectedWeek();
     }
 
-    void showClientForm(boolean editing) {
-        showStandardForm(editing ? "Datos del Cliente" : "Ingresar Nuevo Cliente", "Guardar",
-                new String[]{"Nombres", "Apellidos", "Tipo Documento", "Numero Doc.",
-                        "Correo Electronico", "Numero Celular"},
-                editing ? new String[]{"Juan Carlos", "Canales", "DUI", "000000-0",
-                        "admin@gmail.com", "77223344"} : null);
+    private void ensureSelectedWeekStart() {
+        if (selectedWeekStart == null) {
+            selectedWeekStart = getWeekStart(java.util.Calendar.getInstance());
+        }
+        clampSelectedWeekStart();
+    }
+
+    private void clampSelectedWeekStart() {
+        java.util.Calendar minimum = getWeekStart(java.util.Calendar.getInstance());
+        java.util.Calendar horizonEnd = java.util.Calendar.getInstance();
+        horizonEnd.add(java.util.Calendar.MONTH, 1);
+        horizonEnd.set(java.util.Calendar.DAY_OF_MONTH,
+                horizonEnd.getActualMaximum(java.util.Calendar.DAY_OF_MONTH));
+        java.util.Calendar maximum = getWeekStart(horizonEnd);
+
+        selectedWeekStart.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        selectedWeekStart.set(java.util.Calendar.MINUTE, 0);
+        selectedWeekStart.set(java.util.Calendar.SECOND, 0);
+        selectedWeekStart.set(java.util.Calendar.MILLISECOND, 0);
+        if (selectedWeekStart.before(minimum)) {
+            selectedWeekStart = (java.util.Calendar) minimum.clone();
+        } else if (selectedWeekStart.after(maximum)) {
+            selectedWeekStart = (java.util.Calendar) maximum.clone();
+        }
+    }
+
+    void refreshSelectedWeek() {
+        ensureSelectedWeekStart();
+        java.util.Calendar first = (java.util.Calendar) selectedWeekStart.clone();
+        java.text.SimpleDateFormat isoFormat = new java.text.SimpleDateFormat(
+                "yyyy-MM-dd", java.util.Locale.US);
+        String desde = isoFormat.format(first.getTime());
+        java.util.Calendar last = (java.util.Calendar) first.clone();
+        last.add(java.util.Calendar.DAY_OF_MONTH, 6);
+        String hasta = isoFormat.format(last.getTime());
+        int[] cardIds = {
+                R.id.service_daily_shift_one, R.id.service_daily_shift_two,
+                R.id.service_daily_shift_three, R.id.service_daily_shift_four,
+                R.id.service_daily_shift_five, R.id.service_daily_shift_six,
+                R.id.service_daily_shift_seven
+        };
+
+        new Thread(() -> {
+            ues.edu.sv.proyect_bs.data.AppDB database =
+                    ues.edu.sv.proyect_bs.data.AppDB.getInstance(this);
+            java.util.List<ues.edu.sv.proyect_bs.modelos.HorarioAtencionDiario> rows =
+                    database.horarioAtencionDiarioDAO().obtenerEntreFechas(desde, hasta);
+            java.util.Map<String, ues.edu.sv.proyect_bs.modelos.HorarioAtencionDiario> byDate =
+                    new java.util.HashMap<>();
+            for (ues.edu.sv.proyect_bs.modelos.HorarioAtencionDiario row : rows) {
+                byDate.put(row.fecha, row);
+            }
+            runOnUiThread(() -> {
+                int activeDays = 0;
+                java.text.SimpleDateFormat labelFormat = new java.text.SimpleDateFormat(
+                        "EEE dd/MM/yyyy", new java.util.Locale("es", "ES"));
+                for (int index = 0; index < cardIds.length; index++) {
+                    java.util.Calendar date = (java.util.Calendar) first.clone();
+                    date.add(java.util.Calendar.DAY_OF_MONTH, index);
+                    String iso = isoFormat.format(date.getTime());
+                    ues.edu.sv.proyect_bs.modelos.HorarioAtencionDiario row = byDate.get(iso);
+                    bindDailyShiftCard(cardIds[index], date, row);
+                    if (row != null && Boolean.TRUE.equals(row.estado)) {
+                        activeDays++;
+                    }
+                }
+                android.widget.TextView summary = findViewById(R.id.week_days_summary);
+                if (summary != null) {
+                    summary.setText("Días " + activeDays + "/7");
+                }
+            });
+        }).start();
+    }
+
+    private void bindDailyShiftCard(int cardId, java.util.Calendar date,
+                                    ues.edu.sv.proyect_bs.modelos.HorarioAtencionDiario row) {
+        View card = findViewById(cardId);
+        if (card == null) {
+            return;
+        }
+        java.text.SimpleDateFormat labelFormat = new java.text.SimpleDateFormat(
+                "EEE dd/MM/yyyy", new java.util.Locale("es", "ES"));
+        TextView dateView = card.findViewById(R.id.daily_shift_date);
+        TextView hoursView = card.findViewById(R.id.daily_shift_hours);
+        TextView breakView = card.findViewById(R.id.daily_shift_break);
+        SwitchMaterial activeSwitch = card.findViewById(R.id.daily_shift_active);
+        dateView.setText(labelFormat.format(date.getTime()));
+
+        if (row == null) {
+            hoursView.setText("Sin horario generado");
+            breakView.setText("Sin receso");
+            activeSwitch.setChecked(false);
+            card.findViewById(R.id.action_edit_daily_shift).setOnClickListener(null);
+            return;
+        }
+
+        hoursView.setText(formatTimeRange(row.apertura, row.cierre));
+        breakView.setText(row.receso
+                ? formatTimeRange(row.inicio, row.fin)
+                : "Sin receso");
+        activeSwitch.setOnCheckedChangeListener(null);
+        activeSwitch.setChecked(Boolean.TRUE.equals(row.estado));
+        activeSwitch.setOnCheckedChangeListener((button, checked) -> {
+            row.estado = checked;
+            persistDailyShift(row);
+        });
+        card.findViewById(R.id.action_edit_daily_shift).setOnClickListener(v ->
+                showDailyShiftForm(row));
+    }
+
+    interface ClientFormListener {
+        void onSave(String names, String lastNames, long documentId, String document,
+                    String email, String phone, String birthDate, String password,
+                    boolean active, long specialtyId);
+    }
+
+    void showClientForm(boolean editing,
+            ues.edu.sv.proyect_bs.modelos.Cliente client,
+            ues.edu.sv.proyect_bs.modelos.Persona person,
+            java.util.List<ues.edu.sv.proyect_bs.modelos.TipoDocumento> documents,
+            java.util.List<ues.edu.sv.proyect_bs.modelos.CategoriaServicio> specialties,
+            ClientFormListener listener) {
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_standard, null);
+        ((TextView) content.findViewById(R.id.modal_admin_title))
+                .setText(editing ? "Datos del Cliente" : "Ingresar Nuevo Cliente");
+        LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
+        EditText[] inputs = new EditText[8];
+        Spinner[] documentSpinner = {null};
+        Spinner[] specialtySpinner = {null};
+
+        LinearLayout namesRow = createClientModalRow(modalContext);
+        inputs[0] = (EditText) createLabeledClientModalField(modalContext, namesRow,
+                "Nombres", person == null ? "" : safeModalValue(person.nombres));
+        configureNameInput(inputs[0]);
+        inputs[1] = (EditText) createLabeledClientModalField(modalContext, namesRow,
+                "Apellidos", person == null ? "" : safeModalValue(person.apellidos));
+        configureNameInput(inputs[1]);
+        fields.addView(namesRow);
+
+        LinearLayout documentRow = createClientModalRow(modalContext);
+        documentSpinner[0] = (Spinner) createLabeledClientModalSpinner(modalContext,
+                documentRow, "Tipo Documento");
+        String[] documentOptions = new String[documents.size() + 1];
+        documentOptions[0] = "Seleccionar";
+        for (int index = 0; index < documents.size(); index++) {
+            documentOptions[index + 1] = documents.get(index).nombredocumento;
+        }
+        documentSpinner[0].setAdapter(createModalSpinnerAdapter(modalContext, documentOptions));
+        for (int index = 0; index < documents.size(); index++) {
+            if (person != null && documents.get(index).iddocumento
+                    == (person.iddocumento == null ? 0L : person.iddocumento)) {
+                documentSpinner[0].setSelection(index + 1);
+                break;
+            }
+        }
+        inputs[2] = (EditText) createLabeledClientModalField(modalContext, documentRow,
+                "Numero Doc.", person == null ? "" : safeModalValue(person.identificadordoc));
+        fields.addView(documentRow);
+
+        LinearLayout contactRow = createClientModalRow(modalContext);
+        inputs[3] = (EditText) createLabeledClientModalField(modalContext, contactRow,
+                "Correo Electronico", person == null ? "" : safeModalValue(person.correo_electronico));
+        inputs[3].setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        if (editing) {
+            inputs[3].setEnabled(false);
+            inputs[3].setFocusable(false);
+            inputs[3].setAlpha(0.65f);
+            inputs[3].setTextColor(android.graphics.Color.parseColor("#6F6F6F"));
+        }
+        inputs[4] = (EditText) createLabeledClientModalField(modalContext, contactRow,
+                "Numero Celular", person == null ? "" : safeModalValue(person.numero_celular));
+        configurePhoneInput(inputs[4]);
+        fields.addView(contactRow);
+
+        LinearLayout dateRow = createClientModalRow(modalContext);
+        inputs[5] = (EditText) createLabeledClientModalField(modalContext, dateRow,
+                "Fecha Nacimiento", person == null ? ""
+                        : formatModalBirthDate(person.fecha_nacimiento));
+        configureModalDateField(modalContext, inputs[5]);
+        LinearLayout activeColumn = new LinearLayout(modalContext);
+        activeColumn.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams activeParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        activeParams.setMarginStart(dp(6));
+        activeColumn.setLayoutParams(activeParams);
+        TextView activeLabel = new TextView(modalContext);
+        activeLabel.setText("Activo");
+        activeLabel.setTextColor(android.graphics.Color.parseColor("#263248"));
+        activeLabel.setTextSize(14);
+        activeLabel.setPadding(0, dp(8), 0, dp(4));
+        activeColumn.addView(activeLabel);
+        com.google.android.material.switchmaterial.SwitchMaterial activeSwitch =
+                new com.google.android.material.switchmaterial.SwitchMaterial(modalContext);
+        activeSwitch.setChecked(client == null || Boolean.TRUE.equals(client.estado));
+        activeColumn.addView(activeSwitch);
+        dateRow.addView(activeColumn);
+        fields.addView(dateRow);
+
+        LinearLayout passwordSpecialtyRow = createClientModalRow(modalContext);
+        inputs[6] = (EditText) createLabeledClientModalField(modalContext,
+                passwordSpecialtyRow, "Contraseña", "");
+        configurePasswordField(inputs[6], modalContext);
+        if (editing) {
+            inputs[6].setText("********");
+            inputs[6].setTag("existing-password-mask");
+            inputs[6].setEnabled(false);
+            inputs[6].setFocusable(false);
+        }
+        specialtySpinner[0] = (Spinner) createLabeledClientModalSpinner(modalContext,
+                passwordSpecialtyRow, "Servicio Preferencial");
+        String[] specialtyOptions = new String[specialties.size() + 1];
+        specialtyOptions[0] = "Seleccionar servicio";
+        for (int index = 0; index < specialties.size(); index++) {
+            specialtyOptions[index + 1] = specialties.get(index).nombre;
+        }
+        specialtySpinner[0].setAdapter(createModalSpinnerAdapter(modalContext, specialtyOptions));
+        for (int index = 0; index < specialties.size(); index++) {
+            if (client != null && specialties.get(index).idcategoria_servicio
+                    == (client.preferencia_especialidad == null
+                    ? 0L : client.preferencia_especialidad)) {
+                specialtySpinner[0].setSelection(index + 1);
+                break;
+            }
+        }
+        fields.addView(passwordSpecialtyRow);
+
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
+                .setView(content)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Guardar", null)
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            styleModalButtons(dialog);
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+                        int documentPosition = documentSpinner[0].getSelectedItemPosition() - 1;
+                        int specialtyPosition = specialtySpinner[0].getSelectedItemPosition() - 1;
+                        if (documentPosition < 0 || documentPosition >= documents.size()) {
+                            showFieldError(inputs[2], "Selecciona un tipo de documento válido.");
+                            return;
+                        }
+                        if (specialtyPosition < 0 || specialtyPosition >= specialties.size()) {
+                            showFieldError(specialtySpinner[0], "Selecciona un servicio preferencial válido.");
+                            return;
+                        }
+                        String names = inputs[0].getText().toString().trim();
+                        String lastNames = inputs[1].getText().toString().trim();
+                        String document = inputs[2].getText().toString().trim();
+                        String email = inputs[3].getText().toString().trim();
+                        String phone = inputs[4].getText().toString().trim();
+                        String birthDate = inputs[5].getText().toString().trim();
+                        boolean keepingExistingPassword =
+                                editing && "existing-password-mask".equals(inputs[6].getTag());
+                        String password = keepingExistingPassword ? "" : inputs[6].getText().toString();
+                        if (!isValidName(names)) {
+                            showFieldError(inputs[0], "Usa sólo letras y no lo dejes vacío.");
+                            return;
+                        }
+                        if (!isValidName(lastNames)) {
+                            showFieldError(inputs[1], "Usa sólo letras y no lo dejes vacío.");
+                            return;
+                        }
+                        if (document.length() < 8) {
+                            showFieldError(inputs[2], "Debe tener al menos 8 caracteres.");
+                            return;
+                        }
+                        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                            showFieldError(inputs[3], "Ingresa un correo válido.");
+                            return;
+                        }
+                        if (!phone.matches("\\d{8}")) {
+                            showFieldError(inputs[4], "Debe contener exactamente 8 números.");
+                            return;
+                        }
+                        if (birthDate.isEmpty()) {
+                            showFieldError(inputs[5], "Selecciona la fecha de nacimiento.");
+                            return;
+                        }
+                        if (!editing && password.trim().isEmpty()) {
+                            showFieldError(inputs[6], "La contraseña es obligatoria.");
+                            return;
+                        }
+                        listener.onSave(names, lastNames,
+                                documents.get(documentPosition).iddocumento, document,
+                                email, phone, birthDate, password, activeSwitch.isChecked(),
+                                specialties.get(specialtyPosition).idcategoria_servicio);
+                        dialog.dismiss();
+                    });
+        });
+        dialog.show();
     }
 
     interface BarberFormListener {
         void onSave(String names, String lastNames, long documentId, String document,
-                    String email, String phone, String password, long specialtyId);
+                    String email, String phone, String password, String birthDate,
+                    double salary, boolean active, long specialtyId);
     }
 
     interface ServiceFormListener {
         void onSave(ues.edu.sv.proyect_bs.modelos.Servicios service);
+    }
+
+    interface BenefitFormListener {
+        void onSave(ues.edu.sv.proyect_bs.modelos.Beneficios benefit,
+                    Runnable onSuccess, Runnable onFailure);
     }
 
     void showBarberForm(boolean editing,
@@ -686,89 +1245,157 @@ public class MainActivity extends AppCompatActivity {
         ((TextView) content.findViewById(R.id.modal_admin_title))
                 .setText(editing ? "Datos del Barbero" : "Ingresar Nuevo Barbero");
         LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
-        String[] labels = {"Nombres", "Apellidos", "Tipo Documento", "Numero Doc.",
-                "Correo Electronico", "Numero Celular", "Contraseña", "Especialidad"};
-        String[] values = {
-                person == null ? "" : safeModalValue(person.nombres),
-                person == null ? "" : safeModalValue(person.apellidos),
-                "", person == null ? "" : safeModalValue(person.identificadordoc),
-                barber == null ? "" : safeModalValue(barber.correo_electronico),
-                person == null ? "" : safeModalValue(person.numero_celular), "", ""
-        };
-        EditText[] inputs = new EditText[labels.length];
+        EditText[] inputs = new EditText[8];
         Spinner[] documentSpinner = {null};
         Spinner[] specialtySpinner = {null};
-        for (int i = 0; i < labels.length; i++) {
-            TextView label = new TextView(modalContext);
-            label.setText(labels[i]);
-            label.setTextColor(android.graphics.Color.parseColor("#263248"));
-            label.setTextSize(14);
-            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            labelParams.topMargin = dp(8);
-            fields.addView(label, labelParams);
-            if (i == 2 || i == 7) {
-                Spinner spinner = new Spinner(modalContext);
-                configureModalSpinnerAppearance(spinner);
-                if (i == 2) {
-                    documentSpinner[0] = spinner;
-                    String[] options = new String[documents.size() + 1];
-                    options[0] = "Seleccionar tipo documento";
-                    for (int index = 0; index < documents.size(); index++) {
-                        options[index + 1] = documents.get(index).nombredocumento;
-                    }
-                    spinner.setAdapter(createModalSpinnerAdapter(modalContext, options));
-                    for (int index = 0; index < documents.size(); index++) {
-                        if (person != null && documents.get(index).iddocumento
-                                == (person.iddocumento == null ? 0L : person.iddocumento)) {
-                            spinner.setSelection(index + 1);
-                            break;
-                        }
-                    }
-                } else {
-                    specialtySpinner[0] = spinner;
-                    String[] options = new String[specialties.size() + 1];
-                    options[0] = "Seleccionar especialidad";
-                    for (int index = 0; index < specialties.size(); index++) {
-                        options[index + 1] = specialties.get(index).nombre;
-                    }
-                    spinner.setAdapter(createModalSpinnerAdapter(modalContext, options));
-                    for (int index = 0; index < specialties.size(); index++) {
-                        if (barber != null && specialties.get(index).idcategoria_servicio
-                                == (barber.especialidad == null ? 0L : barber.especialidad)) {
-                            spinner.setSelection(index + 1);
-                            break;
-                        }
-                    }
-                }
-                fields.addView(spinner, new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
-            } else {
-                inputs[i] = (EditText) createModalField(
-                        modalContext, labels[i], values[i], false);
-                if (i == 0 || i == 1) {
-                    configureNameInput(inputs[i]);
-                } else if (i == 4) {
-                    inputs[i].setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                            | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-                } else if (i == 5) {
-                    configurePhoneInput(inputs[i]);
-                } else if (i == 6) {
-                    configurePasswordField(inputs[i], modalContext);
-                    if (editing) {
-                        inputs[i].setText("********");
-                        inputs[i].setTag("existing-password-mask");
-                        inputs[i].setHint("Contraseña no editable");
-                        inputs[i].setEnabled(false);
-                        inputs[i].setFocusable(false);
-                        inputs[i].setClickable(false);
-                        inputs[i].setCursorVisible(false);
-                    }
-                }
-                fields.addView(inputs[i], new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+
+        LinearLayout identityRow = createClientModalRow(modalContext);
+        LinearLayout photoColumn = new LinearLayout(modalContext);
+        photoColumn.setOrientation(LinearLayout.VERTICAL);
+        photoColumn.setLayoutParams(new LinearLayout.LayoutParams(dp(118),
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        TextView photoLabel = new TextView(modalContext);
+        photoLabel.setText("Foto Perfil");
+        photoLabel.setTextColor(android.graphics.Color.parseColor("#263248"));
+        photoLabel.setTextSize(14);
+        photoLabel.setPadding(0, dp(8), 0, dp(4));
+        photoColumn.addView(photoLabel);
+        android.widget.ImageView photo = new android.widget.ImageView(modalContext);
+        photo.setLayoutParams(new LinearLayout.LayoutParams(dp(110), dp(110)));
+        photo.setImageResource(R.drawable.ic_person);
+        photo.setScaleType(android.widget.ImageView.ScaleType.CENTER);
+        photo.setPadding(dp(24), dp(24), dp(24), dp(24));
+        photo.setBackgroundResource(R.drawable.bg_profile_avatar);
+        photoColumn.addView(photo);
+        identityRow.addView(photoColumn);
+
+        LinearLayout nameColumn = new LinearLayout(modalContext);
+        nameColumn.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        nameParams.setMarginStart(dp(6));
+        nameColumn.setLayoutParams(nameParams);
+        inputs[0] = (EditText) createModalField(modalContext, "Nombres",
+                person == null ? "" : safeModalValue(person.nombres), false);
+        configureNameInput(inputs[0]);
+        TextView namesLabel = new TextView(modalContext);
+        namesLabel.setText("Nombres");
+        namesLabel.setTextColor(android.graphics.Color.parseColor("#263248"));
+        namesLabel.setTextSize(14);
+        namesLabel.setPadding(0, dp(8), 0, dp(4));
+        nameColumn.addView(namesLabel);
+        nameColumn.addView(inputs[0], new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+        inputs[1] = (EditText) createModalField(modalContext, "Apellidos",
+                person == null ? "" : safeModalValue(person.apellidos), false);
+        configureNameInput(inputs[1]);
+        TextView lastNamesLabel = new TextView(modalContext);
+        lastNamesLabel.setText("Apellidos");
+        lastNamesLabel.setTextColor(android.graphics.Color.parseColor("#263248"));
+        lastNamesLabel.setTextSize(14);
+        lastNamesLabel.setPadding(0, dp(8), 0, dp(4));
+        nameColumn.addView(lastNamesLabel);
+        nameColumn.addView(inputs[1], new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+        identityRow.addView(nameColumn);
+        fields.addView(identityRow);
+
+        LinearLayout documentRow = createClientModalRow(modalContext);
+        documentSpinner[0] = (Spinner) createLabeledClientModalSpinner(
+                modalContext, documentRow, "Tipo Documento");
+        String[] documentOptions = new String[documents.size() + 1];
+        documentOptions[0] = "Seleccionar";
+        for (int index = 0; index < documents.size(); index++) {
+            documentOptions[index + 1] = documents.get(index).nombredocumento;
+        }
+        documentSpinner[0].setAdapter(createModalSpinnerAdapter(modalContext, documentOptions));
+        for (int index = 0; index < documents.size(); index++) {
+            if (person != null && documents.get(index).iddocumento
+                    == (person.iddocumento == null ? 0L : person.iddocumento)) {
+                documentSpinner[0].setSelection(index + 1);
+                break;
             }
         }
+        inputs[2] = (EditText) createLabeledClientModalField(modalContext, documentRow,
+                "Numero Doc.", person == null ? "" : safeModalValue(person.identificadordoc));
+        fields.addView(documentRow);
+
+        LinearLayout contactRow = createClientModalRow(modalContext);
+        inputs[3] = (EditText) createLabeledClientModalField(modalContext, contactRow,
+                "Correo Electronico", barber == null ? ""
+                        : safeModalValue(barber.correo_electronico));
+        inputs[3].setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        inputs[4] = (EditText) createLabeledClientModalField(modalContext, contactRow,
+                "Numero Celular", person == null ? "" : safeModalValue(person.numero_celular));
+        configurePhoneInput(inputs[4]);
+        fields.addView(contactRow);
+
+        inputs[5] = (EditText) createModalField(modalContext, "Contraseña", "", false);
+        configurePasswordField(inputs[5], modalContext);
+        TextView passwordLabel = new TextView(modalContext);
+        passwordLabel.setText("Contraseña");
+        passwordLabel.setTextColor(android.graphics.Color.parseColor("#263248"));
+        passwordLabel.setTextSize(14);
+        passwordLabel.setPadding(0, dp(8), 0, dp(4));
+        fields.addView(passwordLabel);
+        fields.addView(inputs[5], new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+        if (editing) {
+            inputs[5].setText("********");
+            inputs[5].setTag("existing-password-mask");
+            inputs[5].setEnabled(false);
+            inputs[5].setFocusable(false);
+        }
+
+        LinearLayout detailsRow = createClientModalRow(modalContext);
+        inputs[6] = (EditText) createLabeledClientModalField(modalContext, detailsRow,
+                "Fecha Nacimiento", person == null ? ""
+                        : formatModalBirthDate(person.fecha_nacimiento));
+        configureModalDateField(modalContext, inputs[6]);
+        inputs[7] = (EditText) createLabeledClientModalField(modalContext, detailsRow,
+                "Salario", barber == null || barber.salario == null
+                        ? "" : new java.text.DecimalFormat("0.00").format(barber.salario));
+        inputs[7].setInputType(android.text.InputType.TYPE_CLASS_NUMBER
+                | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        fields.addView(detailsRow);
+
+        LinearLayout specialtyActiveRow = createClientModalRow(modalContext);
+        specialtySpinner[0] = (Spinner) createLabeledClientModalSpinner(
+                modalContext, specialtyActiveRow, "Especialidad");
+        String[] specialtyOptions = new String[specialties.size() + 1];
+        specialtyOptions[0] = "Seleccionar especialidad";
+        for (int index = 0; index < specialties.size(); index++) {
+            specialtyOptions[index + 1] = specialties.get(index).nombre;
+        }
+        specialtySpinner[0].setAdapter(createModalSpinnerAdapter(modalContext, specialtyOptions));
+        for (int index = 0; index < specialties.size(); index++) {
+            if (barber != null && specialties.get(index).idcategoria_servicio
+                    == (barber.especialidad == null ? 0L : barber.especialidad)) {
+                specialtySpinner[0].setSelection(index + 1);
+                break;
+            }
+        }
+
+        LinearLayout activeColumn = new LinearLayout(modalContext);
+        activeColumn.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams activeParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        activeParams.setMarginStart(dp(6));
+        activeColumn.setLayoutParams(activeParams);
+        TextView activeLabel = new TextView(modalContext);
+        activeLabel.setText("Activo");
+        activeLabel.setTextColor(android.graphics.Color.parseColor("#263248"));
+        activeLabel.setTextSize(14);
+        activeLabel.setPadding(0, dp(8), 0, dp(4));
+        activeColumn.addView(activeLabel);
+        com.google.android.material.switchmaterial.SwitchMaterial activeSwitch =
+                new com.google.android.material.switchmaterial.SwitchMaterial(modalContext);
+        activeSwitch.setChecked(barber == null || Boolean.TRUE.equals(barber.estado));
+        activeColumn.addView(activeSwitch);
+        specialtyActiveRow.addView(activeColumn);
+        fields.addView(specialtyActiveRow);
+
         androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
                 .setView(content)
                 .setNegativeButton("Cancelar", null)
@@ -781,22 +1408,23 @@ public class MainActivity extends AppCompatActivity {
                         int documentPosition = documentSpinner[0].getSelectedItemPosition() - 1;
                         int specialtyPosition = specialtySpinner[0].getSelectedItemPosition() - 1;
                         if (documentPosition < 0 || documentPosition >= documents.size()) {
-                            showFieldError(inputs[3], "Selecciona un tipo de documento válido.");
+                            showFieldError(inputs[2], "Selecciona un tipo de documento válido.");
                             return;
                         }
                         if (specialtyPosition < 0 || specialtyPosition >= specialties.size()) {
-                            showFieldError(inputs[6], "Selecciona una especialidad válida.");
+                            showFieldError(specialtySpinner[0], "Selecciona una especialidad válida.");
                             return;
                         }
                         String names = inputs[0].getText().toString().trim();
                         String lastNames = inputs[1].getText().toString().trim();
-                        String document = inputs[3].getText().toString().trim();
-                        String email = inputs[4].getText().toString().trim();
-                        String phone = inputs[5].getText().toString().trim();
+                        String document = inputs[2].getText().toString().trim();
+                        String email = inputs[3].getText().toString().trim();
+                        String phone = inputs[4].getText().toString().trim();
+                        String birthDate = inputs[6].getText().toString().trim();
                         boolean keepingExistingPassword =
-                                editing && "existing-password-mask".equals(inputs[6].getTag());
+                                editing && "existing-password-mask".equals(inputs[5].getTag());
                         String password = keepingExistingPassword
-                                ? "" : inputs[6].getText().toString();
+                                ? "" : inputs[5].getText().toString();
                         if (!isValidName(names)) {
                             showFieldError(inputs[0], "Usa sólo letras y no lo dejes vacío.");
                             return;
@@ -806,24 +1434,36 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
                         if (document.length() < 8) {
-                            showFieldError(inputs[3], "Debe tener al menos 8 caracteres.");
+                            showFieldError(inputs[2], "Debe tener al menos 8 caracteres.");
                             return;
                         }
                         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                            showFieldError(inputs[4], "Ingresa un correo válido.");
+                            showFieldError(inputs[3], "Ingresa un correo válido.");
                             return;
                         }
                         if (!phone.matches("\\d{8}")) {
-                            showFieldError(inputs[5], "Debe contener exactamente 8 números.");
+                            showFieldError(inputs[4], "Debe contener exactamente 8 números.");
                             return;
                         }
                         if (!editing && password.trim().isEmpty()) {
-                            showFieldError(inputs[6], "La contraseña es obligatoria.");
+                            showFieldError(inputs[5], "La contraseña es obligatoria.");
+                            return;
+                        }
+                        if (birthDate.isEmpty()) {
+                            showFieldError(inputs[6], "Selecciona la fecha de nacimiento.");
+                            return;
+                        }
+                        double salary;
+                        try {
+                            salary = Double.parseDouble(inputs[7].getText().toString().trim());
+                        } catch (Exception exception) {
+                            showFieldError(inputs[7], "Ingresa un salario válido.");
                             return;
                         }
                         listener.onSave(names, lastNames,
                                 documents.get(documentPosition).iddocumento, document,
-                                email, phone, password,
+                                email, phone, password, birthDate, salary,
+                                activeSwitch.isChecked(),
                                 specialties.get(specialtyPosition).idcategoria_servicio);
                         dialog.dismiss();
                     });
@@ -835,15 +1475,101 @@ public class MainActivity extends AppCompatActivity {
         return value == null ? "" : value;
     }
 
+    private LinearLayout createClientModalRow(android.content.Context context) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        return row;
+    }
+
+    private View createLabeledClientModalField(android.content.Context context,
+                                               LinearLayout row, String label, String value) {
+        LinearLayout column = new LinearLayout(context);
+        column.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        params.setMarginEnd(dp(6));
+        column.setLayoutParams(params);
+        TextView labelView = new TextView(context);
+        labelView.setText(label);
+        labelView.setTextColor(android.graphics.Color.parseColor("#263248"));
+        labelView.setTextSize(14);
+        labelView.setPadding(0, dp(8), 0, dp(4));
+        column.addView(labelView);
+        EditText field = (EditText) createModalField(context, label, value, false);
+        column.addView(field, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+        row.addView(column);
+        return field;
+    }
+
+    private View createLabeledClientModalSpinner(android.content.Context context,
+                                                 LinearLayout row, String label) {
+        LinearLayout column = new LinearLayout(context);
+        column.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        params.setMarginEnd(dp(6));
+        column.setLayoutParams(params);
+        TextView labelView = new TextView(context);
+        labelView.setText(label);
+        labelView.setTextColor(android.graphics.Color.parseColor("#263248"));
+        labelView.setTextSize(14);
+        labelView.setPadding(0, dp(8), 0, dp(4));
+        column.addView(labelView);
+        Spinner spinner = new Spinner(context);
+        configureModalSpinnerAppearance(spinner);
+        column.addView(spinner, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+        row.addView(column);
+        return spinner;
+    }
+
+    private String formatModalBirthDate(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return "";
+        }
+        String date = value.trim();
+        if (date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            String[] parts = date.split("-");
+            return parts[2] + "/" + parts[1] + "/" + parts[0];
+        }
+        return date;
+    }
+
     private void styleModalButtons(androidx.appcompat.app.AlertDialog dialog) {
-        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
-                .setTextColor(android.graphics.Color.WHITE);
-        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
-                .setBackgroundColor(android.graphics.Color.parseColor("#287F8D"));
-        dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
-                .setTextColor(android.graphics.Color.WHITE);
-        dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
-                .setBackgroundColor(android.graphics.Color.parseColor("#C51B20"));
+        Button positive = dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+        Button negative = dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE);
+        configureModalButton(positive, "#287F8D");
+        configureModalButton(negative, "#C51B20");
+    }
+
+    private void configureModalButton(Button button, String color) {
+        if (button == null) return;
+        android.graphics.drawable.GradientDrawable background =
+                new android.graphics.drawable.GradientDrawable();
+        background.setColor(android.graphics.Color.parseColor(color));
+        background.setCornerRadius(dp(10));
+        button.setBackground(background);
+        button.setBackgroundTintList(null);
+        button.setTextColor(android.graphics.Color.WHITE);
+        button.setTextSize(14);
+        button.setAllCaps(false);
+        button.setTypeface(button.getTypeface(), android.graphics.Typeface.BOLD);
+        button.setMinWidth(dp(96));
+        button.setPadding(dp(14), dp(9), dp(14), dp(9));
+        button.setStateListAnimator(null);
+        button.setElevation(0);
+        ViewGroup.LayoutParams layoutParams = button.getLayoutParams();
+        if (layoutParams instanceof LinearLayout.LayoutParams) {
+            LinearLayout.LayoutParams params =
+                    (LinearLayout.LayoutParams) layoutParams;
+            params.height = dp(44);
+            params.bottomMargin = dp(2);
+            button.setLayoutParams(params);
+        }
     }
 
     void showSpecialtyForm() {
@@ -912,6 +1638,146 @@ public class MainActivity extends AppCompatActivity {
                 new String[]{"Fecha", "Inicio", "Fin", "Inicio Receso", "Fin Receso"},
                 new String[]{"15/09/2026", "9:00 a.m.", "7:00 p.m.",
                         "11:00 a.m.", "12:00 p.m."});
+    }
+
+    private void showDailyShiftForm(
+            ues.edu.sv.proyect_bs.modelos.HorarioAtencionDiario row) {
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_standard, null);
+        ((TextView) content.findViewById(R.id.modal_admin_title)).setText("Editar jornada");
+        LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
+        String[] labels = {"Fecha", "Apertura", "Cierre", "Inicio Receso", "Fin Receso"};
+        String[] values = {
+                row.fecha,
+                formatTime(row.apertura),
+                formatTime(row.cierre),
+                formatTime(row.inicio),
+                formatTime(row.fin)
+        };
+        android.widget.EditText[] inputs = new android.widget.EditText[labels.length];
+        for (int index = 0; index < labels.length; index++) {
+            TextView label = new TextView(modalContext);
+            label.setText(labels[index]);
+            label.setTextColor(android.graphics.Color.parseColor("#263248"));
+            label.setTextSize(14);
+            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(-1, -2);
+            labelParams.topMargin = dp(8);
+            fields.addView(label, labelParams);
+            inputs[index] = (android.widget.EditText) createModalField(
+                    modalContext, labels[index], values[index], false);
+            fields.addView(inputs[index], new LinearLayout.LayoutParams(-1, dp(44)));
+        }
+        inputs[0].setEnabled(false);
+
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
+                .setView(content)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Guardar", null)
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            styleModalButtons(dialog);
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+                    .setOnClickListener(button -> {
+                        String apertura = normalizeTime(inputs[1].getText().toString());
+                        String cierre = normalizeTime(inputs[2].getText().toString());
+                        String inicio = normalizeTime(inputs[3].getText().toString());
+                        String fin = normalizeTime(inputs[4].getText().toString());
+                        if (apertura == null || cierre == null) {
+                            android.widget.Toast.makeText(this,
+                                    "Ingrese apertura y cierre válidas", android.widget.Toast.LENGTH_SHORT)
+                                    .show();
+                            return;
+                        }
+                        row.apertura = apertura;
+                        row.cierre = cierre;
+                        row.receso = inicio != null && fin != null;
+                        row.inicio = row.receso ? inicio : null;
+                        row.fin = row.receso ? fin : null;
+                        persistDailyShift(row);
+                        dialog.dismiss();
+                    });
+        });
+        dialog.show();
+    }
+
+    private void persistDailyShift(
+            ues.edu.sv.proyect_bs.modelos.HorarioAtencionDiario row) {
+        new Thread(() -> {
+            ues.edu.sv.proyect_bs.data.AppDB.getInstance(this)
+                    .horarioAtencionDiarioDAO().actualizar(row);
+        }).start();
+
+        AuthApiClient apiClient = new AuthApiClient();
+        apiClient.saveDailyShift(SessionManager.getToken(this), row,
+                new AuthApiClient.DailyShiftCallback() {
+                    @Override
+                    public void onSuccess(
+                            ues.edu.sv.proyect_bs.modelos.HorarioAtencionDiario saved) {
+                        runOnUiThread(() -> refreshSelectedWeek());
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        runOnUiThread(() -> android.widget.Toast.makeText(MainActivity.this,
+                                message, android.widget.Toast.LENGTH_SHORT).show());
+                    }
+                });
+    }
+
+    private String formatTimeRange(String start, String end) {
+        if (start == null || end == null || start.isEmpty() || end.isEmpty()) {
+            return "Sin horario";
+        }
+        return formatTime(start) + " - " + formatTime(end);
+    }
+
+    private String formatTime(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        String time = value.contains("T") ? value.substring(value.indexOf('T') + 1) : value;
+        String[] parts = time.split(":");
+        int hour = Integer.parseInt(parts[0]);
+        int minute = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+        String suffix = hour >= 12 ? "p.m." : "a.m.";
+        int displayHour = hour % 12;
+        if (displayHour == 0) {
+            displayHour = 12;
+        }
+        return displayHour + ":" + String.format(java.util.Locale.US, "%02d", minute) + " " + suffix;
+    }
+
+    private String normalizeTime(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        try {
+            java.util.Locale locale = java.util.Locale.US;
+            java.text.SimpleDateFormat parser12 =
+                    new java.text.SimpleDateFormat("h:mm a", locale);
+            parser12.setLenient(false);
+            java.util.Date parsed = parser12.parse(trimmed.replace("p.m.", "PM").replace("a.m.", "AM"));
+            java.text.SimpleDateFormat output =
+                    new java.text.SimpleDateFormat("HH:mm", java.util.Locale.US);
+            return output.format(parsed);
+        } catch (Exception ignored) {
+            try {
+                java.text.SimpleDateFormat parser24 =
+                        new java.text.SimpleDateFormat("H:mm", java.util.Locale.US);
+                parser24.setLenient(false);
+                java.util.Date parsed = parser24.parse(trimmed);
+                java.text.SimpleDateFormat output =
+                        new java.text.SimpleDateFormat("HH:mm", java.util.Locale.US);
+                return output.format(parsed);
+            } catch (Exception ignoredAgain) {
+                return null;
+            }
+        }
     }
 
     void showServiceForm() {
@@ -1139,9 +2005,190 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void showBenefitForm() {
-        showStandardForm("Asignar Beneficio", "Guardar Servicio",
-                new String[]{"CategorÃ­a", "Selecciona Servicio", "Coste Pts"},
+        showStandardForm("Asignar Beneficio", "Guardar Beneficio",
+                new String[]{"Categoría", "Selecciona Servicio", "Coste Pts"},
                 null);
+    }
+
+    void showBenefitForm(boolean editing, ues.edu.sv.proyect_bs.modelos.Beneficios benefit,
+            java.util.List<ues.edu.sv.proyect_bs.modelos.CategoriaServicio> categories,
+            java.util.List<ues.edu.sv.proyect_bs.modelos.Servicios> services,
+            BenefitFormListener listener) {
+        android.content.Context modalContext = createLightModalContext();
+        View content = android.view.LayoutInflater.from(modalContext)
+                .inflate(R.layout.modal_admin_standard, null);
+        ((TextView) content.findViewById(R.id.modal_admin_title)).setText("Asignar Beneficio");
+        LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
+
+        LinearLayout categoryActiveRow = createClientModalRow(modalContext);
+        Spinner categorySpinner = (Spinner) createLabeledClientModalSpinner(
+                modalContext, categoryActiveRow, "Categoría");
+        String[] categoryOptions = new String[categories.size() + 1];
+        categoryOptions[0] = "Seleccionar categoría";
+        for (int index = 0; index < categories.size(); index++) {
+            categoryOptions[index + 1] = categories.get(index).nombre;
+        }
+        categorySpinner.setAdapter(createModalSpinnerAdapter(modalContext, categoryOptions));
+        if (benefit == null && !categories.isEmpty()) {
+            categorySpinner.setSelection(1);
+        }
+
+        LinearLayout activeColumn = new LinearLayout(modalContext);
+        activeColumn.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams activeParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        activeParams.setMarginStart(dp(6));
+        activeColumn.setLayoutParams(activeParams);
+        TextView activeLabel = new TextView(modalContext);
+        activeLabel.setText("Activo");
+        activeLabel.setTextColor(android.graphics.Color.parseColor("#263248"));
+        activeLabel.setTextSize(14);
+        activeLabel.setPadding(0, dp(8), 0, dp(4));
+        activeColumn.addView(activeLabel);
+        SwitchMaterial activeSwitch = new SwitchMaterial(modalContext);
+        activeSwitch.setChecked(benefit == null || Boolean.TRUE.equals(benefit.estado));
+        activeSwitch.setThumbTintList(android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.WHITE));
+        activeSwitch.setTrackTintList(new android.content.res.ColorStateList(
+                new int[][]{
+                        new int[]{android.R.attr.state_checked},
+                        new int[]{}
+                },
+                new int[]{
+                        android.graphics.Color.parseColor("#287F8D"),
+                        android.graphics.Color.parseColor("#B7BDC5")
+                }));
+        activeSwitch.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dp(44)));
+        activeColumn.addView(activeSwitch);
+        categoryActiveRow.addView(activeColumn);
+        fields.addView(categoryActiveRow);
+
+        LinearLayout serviceRow = createClientModalRow(modalContext);
+        Spinner serviceSpinner = (Spinner) createLabeledClientModalSpinner(
+                modalContext, serviceRow, "Selecciona Servicio");
+        java.util.List<ues.edu.sv.proyect_bs.modelos.Servicios> filteredServices =
+                new java.util.ArrayList<>();
+        java.lang.Runnable[] updateServiceOptions = new java.lang.Runnable[1];
+        updateServiceOptions[0] = () -> {
+            filteredServices.clear();
+            int categoryPosition = categorySpinner.getSelectedItemPosition();
+            if (categoryPosition > 0) {
+                long categoryId = categories.get(categoryPosition - 1).idcategoria_servicio;
+                for (ues.edu.sv.proyect_bs.modelos.Servicios service : services) {
+                    if (service.idcategoria_servicio != null
+                            && service.idcategoria_servicio == categoryId) {
+                        filteredServices.add(service);
+                    }
+                }
+            }
+            String[] options = new String[filteredServices.size() + 1];
+            options[0] = "Sin servicio";
+            for (int index = 0; index < filteredServices.size(); index++) {
+                options[index + 1] = safeModalValue(
+                        filteredServices.get(index).nombre_servicio);
+            }
+            serviceSpinner.setAdapter(createModalSpinnerAdapter(modalContext, options));
+        };
+        updateServiceOptions[0].run();
+        categorySpinner.setOnItemSelectedListener(
+                new android.widget.AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(android.widget.AdapterView<?> parent,
+                                               android.view.View view,
+                                               int position, long id) {
+                        updateServiceOptions[0].run();
+                    }
+                    @Override
+                    public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+                });
+        fields.addView(serviceRow);
+
+        LinearLayout costRow = createClientModalRow(modalContext);
+        EditText cost = (EditText) createLabeledClientModalField(
+                modalContext, costRow, "Coste Pts",
+                benefit == null || benefit.costepuntos == null
+                        ? "" : String.valueOf(benefit.costepuntos));
+        cost.setHint("25.00");
+        cost.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        View costColumn = costRow.getChildAt(0);
+        if (costColumn != null) {
+            LinearLayout.LayoutParams costParams = new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.5f);
+            costParams.setMarginEnd(dp(6));
+            costColumn.setLayoutParams(costParams);
+        }
+        fields.addView(costRow);
+
+        if (benefit != null) {
+            if (benefit.categoria != null) {
+                for (int index = 0; index < categories.size(); index++) {
+                    if (categories.get(index).idcategoria_servicio == benefit.categoria) {
+                        categorySpinner.setSelection(index + 1);
+                        break;
+                    }
+                }
+            }
+            if (benefit.servicio != null) {
+                for (int index = 0; index < filteredServices.size(); index++) {
+                    if (filteredServices.get(index).idservicio == benefit.servicio) {
+                        serviceSpinner.setSelection(index + 1);
+                        break;
+                    }
+                }
+            }
+        }
+
+        androidx.appcompat.app.AlertDialog dialog =
+                new MaterialAlertDialogBuilder(modalContext)
+                        .setView(content)
+                        .setNegativeButton("Cancelar", null)
+                        .setPositiveButton(editing ? "Guardar Cambios" : "Guardar Beneficio", null)
+                        .create();
+        dialog.setOnShowListener(ignored -> {
+            styleModalButtons(dialog);
+            Button saveButton = dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+            saveButton.setOnClickListener(v -> {
+                        int costPoints;
+                        try {
+                            costPoints = Integer.parseInt(cost.getText().toString().trim());
+                            if (costPoints <= 0) throw new NumberFormatException();
+                        } catch (NumberFormatException exception) {
+                            showFieldError(cost, "Ingresa un coste válido.");
+                            return;
+                        }
+                        if (categorySpinner.getSelectedItemPosition() <= 0) {
+                            showFieldError(cost, "Selecciona una categoría.");
+                            return;
+                        }
+                        ues.edu.sv.proyect_bs.modelos.Beneficios value =
+                                new ues.edu.sv.proyect_bs.modelos.Beneficios();
+                        if (benefit != null) {
+                            value.idbeneficio = benefit.idbeneficio;
+                            value.estado = benefit.estado;
+                            value.costepuntos = benefit.costepuntos;
+                            value.categoria = benefit.categoria;
+                            value.servicio = benefit.servicio;
+                        }
+                        value.costepuntos = costPoints;
+                        value.estado = activeSwitch.isChecked();
+                        value.categoria = categorySpinner.getSelectedItemPosition() <= 0
+                                ? null : categories.get(
+                                        categorySpinner.getSelectedItemPosition() - 1)
+                                        .idcategoria_servicio;
+                        value.servicio = serviceSpinner.getSelectedItemPosition() <= 0
+                                ? null : filteredServices.get(
+                                        serviceSpinner.getSelectedItemPosition() - 1)
+                                        .idservicio;
+                        if (listener != null) {
+                            saveButton.setEnabled(false);
+                            listener.onSave(value, dialog::dismiss,
+                                    () -> saveButton.setEnabled(true));
+                        }
+                    });
+        });
+        dialog.show();
     }
 
     interface ProfileUpdateListener {
@@ -1164,79 +2211,71 @@ public class MainActivity extends AppCompatActivity {
         ((TextView) content.findViewById(R.id.modal_admin_title))
                 .setText((profile.names + " " + profile.lastNames).trim());
         LinearLayout fields = content.findViewById(R.id.modal_admin_fields);
-        String[] labels = {"Nombres", "Apellidos", "Tipo Documento", "Numero Doc.",
-                "Correo Electronico", "Numero Celular", "Fecha Nacimiento"};
-        String[] values = {profile.names, profile.lastNames, "", profile.document,
-                profile.email, profile.phone, toDisplayDate(profile.birthDate)};
-        EditText[] inputs = new EditText[labels.length];
+        EditText[] inputs = new EditText[7];
         final Spinner[] documentSpinner = {null};
-        for (int i = 0; i < labels.length; i++) {
-            TextView label = new TextView(modalContext);
-            label.setText(labels[i]);
-            label.setTextColor(android.graphics.Color.parseColor("#263248"));
-            label.setTextSize(14);
-            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            labelParams.topMargin = dp(8);
-            fields.addView(label, labelParams);
-            if (i == 2) {
-                documentSpinner[0] = new Spinner(modalContext);
-                configureModalSpinnerAppearance(documentSpinner[0]);
-                String[] options = new String[documents.size() + 1];
-                options[0] = "Seleccionar tipo documento";
-                for (int index = 0; index < documents.size(); index++) {
-                    options[index + 1] = documents.get(index).nombredocumento;
-                }
-                documentSpinner[0].setAdapter(createModalSpinnerAdapter(modalContext, options));
-                documentSpinner[0].setPrompt("Seleccione tipo documento");
-                documentSpinner[0].setContentDescription("Selector de tipo documento");
-                int selected = 0;
-                for (int index = 0; index < documents.size(); index++) {
-                    if (documents.get(index).iddocumento == profile.documentId) {
-                        selected = index + 1;
-                        break;
-                    }
-                }
-                documentSpinner[0].setSelection(selected);
-                fields.addView(documentSpinner[0], new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
-            } else {
-                inputs[i] = (EditText) createModalField(
-                        modalContext, labels[i], values[i], false);
-                if (i == 0 || i == 1) {
-                    configureNameInput(inputs[i]);
-                } else if (i == 4) {
-                    inputs[i].setEnabled(false);
-                    inputs[i].setAlpha(0.65f);
-                } else if (i == 5) {
-                    configurePhoneInput(inputs[i]);
-                }
-                fields.addView(inputs[i], new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+
+        LinearLayout nameRow = createClientModalRow(modalContext);
+        inputs[0] = (EditText) createLabeledClientModalField(
+                modalContext, nameRow, "Nombres", profile.names);
+        inputs[1] = (EditText) createLabeledClientModalField(
+                modalContext, nameRow, "Apellidos", profile.lastNames);
+        configureNameInput(inputs[0]);
+        configureNameInput(inputs[1]);
+        fields.addView(nameRow);
+
+        LinearLayout documentRow = createClientModalRow(modalContext);
+        documentSpinner[0] = (Spinner) createLabeledClientModalSpinner(
+                modalContext, documentRow, "Tipo Documento");
+        String[] documentOptions = new String[documents.size() + 1];
+        documentOptions[0] = "Seleccionar";
+        for (int index = 0; index < documents.size(); index++) {
+            documentOptions[index + 1] = documents.get(index).nombredocumento;
+        }
+        documentSpinner[0].setAdapter(createModalSpinnerAdapter(modalContext, documentOptions));
+        int selectedDocument = 0;
+        for (int index = 0; index < documents.size(); index++) {
+            if (documents.get(index).iddocumento == profile.documentId) {
+                selectedDocument = index + 1;
+                break;
             }
         }
+        documentSpinner[0].setSelection(selectedDocument);
+        inputs[3] = (EditText) createLabeledClientModalField(
+                modalContext, documentRow, "Numero Doc.", profile.document);
+        fields.addView(documentRow);
+
+        LinearLayout contactRow = createClientModalRow(modalContext);
+        inputs[4] = (EditText) createLabeledClientModalField(
+                modalContext, contactRow, "Correo Electronico", profile.email);
+        inputs[4].setEnabled(false);
+        inputs[4].setFocusable(false);
+        inputs[4].setAlpha(0.65f);
+        inputs[4].setTextColor(android.graphics.Color.parseColor("#6F6F6F"));
+        inputs[5] = (EditText) createLabeledClientModalField(
+                modalContext, contactRow, "Numero Celular", profile.phone);
+        configurePhoneInput(inputs[5]);
+        fields.addView(contactRow);
+
+        LinearLayout birthRow = createClientModalRow(modalContext);
+        inputs[6] = (EditText) createLabeledClientModalField(
+                modalContext, birthRow, "Fecha Nacimiento", toDisplayDate(profile.birthDate));
+        configureModalDateField(modalContext, inputs[6]);
+        fields.addView(birthRow);
+
         androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(modalContext)
                 .setView(content)
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Guardar", null)
                 .create();
         dialog.setOnShowListener(ignored -> {
-            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
-                    .setTextColor(android.graphics.Color.WHITE);
-            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
-                    .setBackgroundColor(android.graphics.Color.parseColor("#287F8D"));
-            dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
-                    .setTextColor(android.graphics.Color.WHITE);
-            dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
-                    .setBackgroundColor(android.graphics.Color.parseColor("#C51B20"));
+            styleModalButtons(dialog);
             dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
                     .setOnClickListener(v -> {
                         int selected = documentSpinner[0] == null
                                 ? 0 : documentSpinner[0].getSelectedItemPosition() - 1;
                         if (selected < 0 || selected >= documents.size()) {
-                            android.widget.Toast.makeText(MainActivity.this,
-                                    "Selecciona un tipo de documento válido.",
-                                    android.widget.Toast.LENGTH_LONG).show();
+                            showFieldError(documentSpinner[0],
+                                    "Selecciona un tipo de documento válido.");
                             return;
                         }
                         long documentId = selected >= 0 && selected < documents.size()
@@ -1246,21 +2285,21 @@ public class MainActivity extends AppCompatActivity {
                         String phone = inputs[5].getText().toString().trim();
                         String displayBirthDate = inputs[6].getText().toString().trim();
                         if (!isValidName(names)) {
-                            inputs[0].setError("Usa sólo letras y no lo dejes vacío.");
+                            showFieldError(inputs[0], "Usa sólo letras y no lo dejes vacío.");
                             return;
                         }
                         if (!isValidName(lastNames)) {
-                            inputs[1].setError("Usa sólo letras y no lo dejes vacío.");
+                            showFieldError(inputs[1], "Usa sólo letras y no lo dejes vacío.");
                             return;
                         }
                         String document = inputs[3].getText().toString().trim();
                         if (document.length() < 8) {
-                            inputs[3].setError(
+                            showFieldError(inputs[3],
                                     "El identificador es obligatorio y debe tener al menos 8 caracteres.");
                             return;
                         }
                         if (!phone.matches("\\d{8}")) {
-                            inputs[5].setError("Debe contener exactamente 8 números.");
+                            showFieldError(inputs[5], "Debe contener exactamente 8 números.");
                             return;
                         }
                         if (!isAtLeastSixteen(displayBirthDate)) {
@@ -1269,7 +2308,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                         listener.onSave(names, lastNames, documentId,
                                 document,
-                                inputs[4].getText().toString().trim(),
+                                profile.email,
                                 phone, toApiDate(displayBirthDate));
                         dialog.dismiss();
                     });
@@ -1314,6 +2353,16 @@ public class MainActivity extends AppCompatActivity {
         android.graphics.drawable.Drawable errorIcon =
                 getDrawable(android.R.drawable.ic_dialog_alert);
         field.setError(message, errorIcon);
+        field.requestFocus();
+    }
+
+    private void showFieldError(View field, String message) {
+        if (field instanceof EditText) {
+            showFieldError((EditText) field, message);
+            return;
+        }
+        field.setContentDescription(message);
+        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show();
         field.requestFocus();
     }
 
@@ -1405,6 +2454,14 @@ public class MainActivity extends AppCompatActivity {
         return loadedAdminProfile;
     }
 
+    void setSelectedBenefitClientId(long clientId) {
+        selectedBenefitClientId = clientId;
+    }
+
+    long getSelectedBenefitClientId() {
+        return selectedBenefitClientId;
+    }
+
     void showPasswordForm() {
         showStandardForm("Cambio ContraseÃ±a", "Guardar",
                 new String[]{"ContraseÃ±a Actual", "Nueva ContraseÃ±a"},
@@ -1467,14 +2524,7 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton(positiveText, null)
                 .create();
         dialog.setOnShowListener(ignored -> {
-            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
-                    .setTextColor(android.graphics.Color.WHITE);
-            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
-                    .setBackgroundColor(android.graphics.Color.parseColor("#287F8D"));
-            dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
-                    .setTextColor(android.graphics.Color.WHITE);
-            dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
-                    .setBackgroundColor(android.graphics.Color.parseColor("#C51B20"));
+            styleModalButtons(dialog);
         });
         dialog.show();
     }
@@ -1736,6 +2786,15 @@ public class MainActivity extends AppCompatActivity {
         field.setInputType(android.text.InputType.TYPE_NULL);
         field.setContentDescription("Seleccionar fecha");
         field.setOnClickListener(v -> showModalDatePicker(context, field));
+    }
+
+    private void configureModalTimeField(android.content.Context context, EditText field) {
+        field.setFocusable(false);
+        field.setFocusableInTouchMode(false);
+        field.setClickable(true);
+        field.setInputType(android.text.InputType.TYPE_NULL);
+        field.setContentDescription("Seleccionar hora");
+        field.setOnClickListener(v -> showModalTimePicker(context, field));
     }
 
     private boolean isModalSelection(String label, boolean specialtyAsSelection) {

@@ -20,4 +20,9 @@ public interface OperacionPendienteDAO {
 
     @Query("DELETE FROM operaciones_pendientes WHERE id = :id")
     void eliminarPorId(long id);
+
+    @Query("DELETE FROM operaciones_pendientes "
+            + "WHERE recurso = :recurso AND metodo = :metodo "
+            + "AND registroId = :registroId")
+    void eliminarPorOperacion(String recurso, String metodo, Long registroId);
 }

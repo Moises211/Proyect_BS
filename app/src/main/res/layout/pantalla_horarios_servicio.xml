@@ -78,6 +78,7 @@
             <include android:id="@+id/service_daily_shift_four" layout="@layout/item_admin_daily_shift" />
             <include android:id="@+id/service_daily_shift_five" layout="@layout/item_admin_daily_shift" />
             <include android:id="@+id/service_daily_shift_six" layout="@layout/item_admin_daily_shift" />
+            <include android:id="@+id/service_daily_shift_seven" layout="@layout/item_admin_daily_shift" />
         </LinearLayout>
     </ScrollView>
 

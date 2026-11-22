@@ -8,5 +8,6 @@ import java.util.List;
     @Update void actualizar(TarifaPuntos value);
     @Delete void eliminar(TarifaPuntos value);
     @Query("SELECT * FROM tarifapuntos") List<TarifaPuntos> obtenerTodos();
+    @Query("SELECT * FROM tarifapuntos ORDER BY idtarifa ASC LIMIT 1") TarifaPuntos obtenerPrimera();
     @Query("SELECT * FROM tarifapuntos WHERE idtarifa = :id LIMIT 1") TarifaPuntos obtenerPorId(long id);
 }
