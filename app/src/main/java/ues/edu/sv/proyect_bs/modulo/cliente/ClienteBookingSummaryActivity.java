@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,135 +17,109 @@ import java.util.concurrent.Executors;
 import ues.edu.sv.proyect_bs.R;
 import ues.edu.sv.proyect_bs.SessionManager;
 import ues.edu.sv.proyect_bs.data.AppDB;
-import ues.edu.sv.proyect_bs.modelos.Barberos;
 import ues.edu.sv.proyect_bs.modelos.CitasCliente;
-import ues.edu.sv.proyect_bs.modelos.Cliente;
 import ues.edu.sv.proyect_bs.modelos.CronogramaBarbero;
 import ues.edu.sv.proyect_bs.modelos.HorarioAtencionBase;
-import ues.edu.sv.proyect_bs.modelos.Persona;
-import ues.edu.sv.proyect_bs.modelos.Servicios;
 
 public class ClienteBookingSummaryActivity extends AppCompatActivity {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private long idservicio;
-    private long idbarbero;
+
+    private long   idservicio;
+    private long   idbarbero;
+    private String nombreServicio;
+    private String nombreBarbero;
+    private int    duracion;
+    private double precio;
+
+    // Horario cargado de la BD
+    private String fechaReserva = "";
+    private String horaReserva  = "09:00:00";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cliente_booking_summary);
 
-        idservicio = getIntent().getLongExtra("idservicio", -1);
-        idbarbero  = getIntent().getLongExtra("idbarbero", -1);
+        idservicio     = getIntent().getLongExtra("idservicio", -1);
+        idbarbero      = getIntent().getLongExtra("idbarbero", -1);
+        nombreServicio = getIntent().getStringExtra("nombreServicio");
+        nombreBarbero  = getIntent().getStringExtra("nombreBarbero");
+        duracion       = getIntent().getIntExtra("duracion", 0);
+        precio         = getIntent().getDoubleExtra("precio", 0.0);
 
-        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
-        setupNavigation();
-        cargarResumen();
+        if (findViewById(R.id.btn_back) != null)
+            findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+
+        poblarUI();
+        cargarHorario();
 
         findViewById(R.id.btn_confirmar).setOnClickListener(v -> confirmarReserva());
     }
 
-    private void cargarResumen() {
+    private void poblarUI() {
+        String detSrv = duracion + " min · $" + String.format(Locale.getDefault(), "%.0f", precio);
+        ((TextView) findViewById(R.id.tv_srv_nombre)).setText(nombreServicio != null ? nombreServicio : "—");
+        ((TextView) findViewById(R.id.tv_srv_detalle)).setText(detSrv);
+        ((TextView) findViewById(R.id.tv_barbero_nombre)).setText(nombreBarbero != null ? nombreBarbero : "—");
+    }
+
+    private void cargarHorario() {
         String hoy = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
         executor.execute(() -> {
             AppDB db = AppDB.getInstance(this);
 
-            Servicios srv = db.serviciosDAO().obtenerPorId(idservicio);
-            Barberos barb = db.barberosDAO().obtenerTodos().stream()
-                    .filter(b -> b.idbarberos == idbarbero)
-                    .findFirst().orElse(null);
-
-            String nombreSrv  = (srv != null) ? srv.nombre_servicio : "Servicio";
-            String detalleSrv = "";
-            if (srv != null) {
-                String dur    = srv.duracion != null ? srv.duracion + " min" : "";
-                String precio = srv.precio   != null
-                        ? " · $" + String.format(Locale.getDefault(), "%.0f", srv.precio) : "";
-                detalleSrv = dur + precio;
-            }
-
-            String nombreBarb   = "Barbero";
-            String detalleBarb  = "";
-            if (barb != null && barb.idpersona != null) {
-                Persona pb = db.personaDAO().obtenerPorId(barb.idpersona);
-                nombreBarb = (pb != null) ? pb.nombres + " " + pb.apellidos : "Barbero";
-            }
-
-            // Horario disponible: buscar apertura del horario base del barbero para hoy o próximo día
             CronogramaBarbero crono = db.cronogramaBarberoDAO().obtenerTodos().stream()
-                    .filter(c -> c.idbarbero == idbarbero && c.fecha != null
-                            && c.fecha.compareTo(hoy) >= 0)
+                    .filter(c -> c.idbarbero == idbarbero && c.fecha != null && c.fecha.compareTo(hoy) >= 0)
                     .min((a, b) -> a.fecha.compareTo(b.fecha))
                     .orElse(null);
 
-            String horarioTexto = "—";
+            String apertura = "09:00";
+            String fecha    = hoy;
+
             if (crono != null) {
+                fecha = crono.fecha;
                 HorarioAtencionBase base = db.horarioAtencionBaseDAO().obtenerTodos().stream()
                         .filter(h -> h.idhorarioatencionbase == crono.idhorario)
                         .findFirst().orElse(null);
-                String apertura = (base != null) ? trimHora(base.apertura) : "09:00";
-                try {
-                    Date d = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(crono.fecha);
-                    String fechaFmt = new SimpleDateFormat("d 'Sep' yyyy", new Locale("es", "SV")).format(d);
-                    horarioTexto = fechaFmt + " - " + apertura + " a.m.";
-                } catch (Exception e) {
-                    horarioTexto = crono.fecha + " - " + apertura;
-                }
+                if (base != null && base.apertura != null)
+                    apertura = base.apertura.length() >= 5 ? base.apertura.substring(0, 5) : base.apertura;
             }
 
-            final String sN = nombreSrv, sD = detalleSrv, bN = nombreBarb, bD = detalleBarb, h = horarioTexto;
-            runOnUiThread(() -> {
-                ((TextView) findViewById(R.id.tv_resumen_servicio)).setText(sN);
-                ((TextView) findViewById(R.id.tv_resumen_srv_detalle)).setText(sD);
-                ((TextView) findViewById(R.id.tv_resumen_barbero)).setText(bN);
-                ((TextView) findViewById(R.id.tv_resumen_barb_detalle)).setText(bD);
-                ((TextView) findViewById(R.id.tv_resumen_horario)).setText(h);
-            });
+            fechaReserva = fecha;
+            horaReserva  = apertura + ":00";
+
+            final String texto = fecha + " - " + apertura + " a.m.";
+            runOnUiThread(() -> ((TextView) findViewById(R.id.tv_horario)).setText(texto));
         });
     }
 
     private void confirmarReserva() {
         long personId = SessionManager.getPersonId(this);
-        String hoy    = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-
         executor.execute(() -> {
             AppDB db = AppDB.getInstance(this);
 
-            Cliente cliente = db.clienteDAO().obtenerTodos().stream()
+            long clienteId = db.clienteDAO().obtenerTodos().stream()
                     .filter(c -> c.idpersona != null && c.idpersona == personId)
-                    .findFirst().orElse(null);
+                    .mapToLong(c -> c.idcliente).findFirst().orElse(-1L);
 
-            if (cliente == null) {
+            if (clienteId == -1) {
                 runOnUiThread(() -> Toast.makeText(this,
-                        "No se encontró perfil de cliente.", Toast.LENGTH_LONG).show());
+                        "No se encontró tu perfil de cliente.", Toast.LENGTH_SHORT).show());
                 return;
             }
 
-            // Hora de apertura
-            CronogramaBarbero crono = db.cronogramaBarberoDAO().obtenerTodos().stream()
-                    .filter(c -> c.idbarbero == idbarbero && c.fecha != null
-                            && c.fecha.compareTo(hoy) >= 0)
-                    .min((a, b) -> a.fecha.compareTo(b.fecha))
-                    .orElse(null);
-
-            String fecha = (crono != null) ? crono.fecha : hoy;
-            String hora  = "09:00:00";
-            if (crono != null) {
-                HorarioAtencionBase base = db.horarioAtencionBaseDAO().obtenerTodos().stream()
-                        .filter(h2 -> h2.idhorarioatencionbase == crono.idhorario)
-                        .findFirst().orElse(null);
-                if (base != null && base.apertura != null) {
-                    hora = base.apertura.length() >= 8 ? base.apertura : base.apertura + ":00";
-                }
-            }
+            long maxId = db.citasClienteDAO().obtenerTodos().stream()
+                    .mapToLong(c -> c.idcitas).max().orElse(0L);
 
             CitasCliente nueva = new CitasCliente();
-            nueva.idcitas    = System.currentTimeMillis();
-            nueva.fecha      = fecha;
-            nueva.hora       = hora;
+            nueva.idcitas    = maxId + 1;
+            nueva.fecha      = fechaReserva.isEmpty()
+                    ? new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date())
+                    : fechaReserva;
+            nueva.hora       = horaReserva;
             nueva.estado     = "PENDIENTE";
-            nueva.idcliente  = cliente.idcliente;
+            nueva.idcliente  = clienteId;
             nueva.idbarbero  = idbarbero;
             nueva.idservicio = idservicio;
 
@@ -160,30 +135,6 @@ public class ClienteBookingSummaryActivity extends AppCompatActivity {
         });
     }
 
-    private void setupNavigation() {
-        findViewById(R.id.nav_inicio).setOnClickListener(v -> {
-            startActivity(new Intent(this, ClienteHomeActivity.class));
-            finish();
-        });
-        findViewById(R.id.nav_citas).setOnClickListener(v -> {
-            startActivity(new Intent(this, ClienteAppointmentsActivity.class));
-            finish();
-        });
-        findViewById(R.id.nav_servicios).setOnClickListener(v -> {
-            startActivity(new Intent(this, ClienteServicesActivity.class));
-            finish();
-        });
-        findViewById(R.id.nav_perfil).setOnClickListener(v -> { /* TODO */ });
-    }
-
-    private String trimHora(String hora) {
-        if (hora == null) return "09:00";
-        return hora.length() >= 5 ? hora.substring(0, 5) : hora;
-    }
-
     @Override
-    protected void onDestroy() {
-        executor.shutdown();
-        super.onDestroy();
-    }
+    protected void onDestroy() { executor.shutdown(); super.onDestroy(); }
 }
