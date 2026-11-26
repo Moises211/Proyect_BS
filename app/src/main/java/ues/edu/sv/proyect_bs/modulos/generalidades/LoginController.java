@@ -53,17 +53,18 @@ final class LoginController extends GeneralidadesViewController {
 
         // Acceso directo para pruebas en emulador y dispositivo
         if ("123456".equals(contrasena)) {
+            android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
             if ("cliente@goodcuts.com".equalsIgnoreCase(correo) || "cliente@gmail.com".equalsIgnoreCase(correo)) {
                 SessionManager.save(host, "demo-token", "Bearer", "CLIENTE", 1L, 1L);
-                host.openRoleModule("CLIENTE");
+                SeedData.inicializarSiVacio(host, () -> host.openRoleModule("CLIENTE"), mainHandler);
                 return;
             } else if ("barbero@goodcuts.com".equalsIgnoreCase(correo) || "barbero@gmail.com".equalsIgnoreCase(correo)) {
                 SessionManager.save(host, "demo-token", "Bearer", "BARBERO", 2L, 2L);
-                host.openRoleModule("BARBERO");
+                SeedData.inicializarSiVacio(host, () -> host.openRoleModule("BARBERO"), mainHandler);
                 return;
             } else if ("admin@goodcuts.com".equalsIgnoreCase(correo) || "admin@gmail.com".equalsIgnoreCase(correo)) {
                 SessionManager.save(host, "demo-token", "Bearer", "ADMIN", 3L, 3L);
-                host.openAdminModule();
+                SeedData.inicializarSiVacio(host, host::openAdminModule, mainHandler);
                 return;
             }
         }
