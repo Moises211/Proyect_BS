@@ -93,9 +93,9 @@ public class BarberoHomeActivity extends AppCompatActivity {
             // TODO: ir a BarberoAppointmentsActivity
         });
 
-        // Servicios/horarios → próxima pantalla
+        // Servicios/horarios
         findViewById(R.id.nav_servicios).setOnClickListener(v -> {
-            // TODO: ir a BarberoScheduleActivity
+            startActivity(new Intent(this, BarberoScheduleActivity.class));
         });
 
         // Perfil

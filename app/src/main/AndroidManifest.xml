@@ -35,6 +35,10 @@
             android:name=".modulo.barbero.BarberoHomeActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".modulo.barbero.BarberoScheduleActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>
