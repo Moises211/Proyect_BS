@@ -63,9 +63,15 @@ public class ClienteServicesActivity extends AppCompatActivity {
             ((TextView) item.findViewById(R.id.tv_srv_detalle)).setText(dur + precio);
 
             final long idservicio = srv.idservicio;
+            final String srvNombre = srv.nombre_servicio != null ? srv.nombre_servicio : "";
+            final int srvDuracion = srv.duracion != null ? srv.duracion : 0;
+            final double srvPrecio = srv.precio != null ? srv.precio : 0.0;
             item.setOnClickListener(v -> {
                 Intent i = new Intent(this, ClienteBarberActivity.class);
                 i.putExtra("idservicio", idservicio);
+                i.putExtra("nombreServicio", srvNombre);
+                i.putExtra("duracion", srvDuracion);
+                i.putExtra("precio", srvPrecio);
                 startActivity(i);
             });
             container.addView(item);

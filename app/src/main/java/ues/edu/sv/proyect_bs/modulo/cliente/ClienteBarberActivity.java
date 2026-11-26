@@ -10,6 +10,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -26,13 +27,25 @@ import ues.edu.sv.proyect_bs.modelos.Persona;
 public class ClienteBarberActivity extends AppCompatActivity {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private long idservicio;
+    private long   idservicio;
+    private String nombreServicio;
+    private int    duracion;
+    private double precio;
+
+    private static class BarberoUI {
+        long idbarbero;
+        String nombre;
+        boolean dispHoy;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cliente_barber);
-        idservicio = getIntent().getLongExtra("idservicio", -1);
+        idservicio     = getIntent().getLongExtra("idservicio", -1);
+        nombreServicio = getIntent().getStringExtra("nombreServicio");
+        duracion       = getIntent().getIntExtra("duracion", 0);
+        precio         = getIntent().getDoubleExtra("precio", 0.0);
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
         setupNavigation();
         cargarBarberos();
@@ -47,46 +60,53 @@ public class ClienteBarberActivity extends AppCompatActivity {
                     .collect(Collectors.toList());
             List<CronogramaBarbero> cronogramas = db.cronogramaBarberoDAO().obtenerTodos();
 
-            runOnUiThread(() -> poblarBarberos(barberos, cronogramas, hoy, db));
+            List<BarberoUI> items = new ArrayList<>();
+            for (Barberos barb : barberos) {
+                BarberoUI ui = new BarberoUI();
+                ui.idbarbero = barb.idbarberos;
+                Persona persona = (barb.idpersona != null)
+                        ? db.personaDAO().obtenerPorId(barb.idpersona) : null;
+                ui.nombre = (persona != null)
+                        ? persona.nombres + " " + persona.apellidos : "Barbero";
+                ui.dispHoy = cronogramas.stream()
+                        .anyMatch(c -> c.idbarbero == barb.idbarberos && hoy.equals(c.fecha));
+                items.add(ui);
+            }
+
+            runOnUiThread(() -> poblarBarberos(items));
         });
     }
 
-    private void poblarBarberos(List<Barberos> barberos, List<CronogramaBarbero> cronogramas,
-                                String hoy, AppDB db) {
+    private void poblarBarberos(List<BarberoUI> items) {
         LinearLayout container = findViewById(R.id.layout_barberos);
         container.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
 
-        for (Barberos barb : barberos) {
+        for (BarberoUI barb : items) {
             View item = inflater.inflate(R.layout.item_barbero_cliente, container, false);
 
-            Persona persona = (barb.idpersona != null)
-                    ? db.personaDAO().obtenerPorId(barb.idpersona) : null;
-            String nombre = (persona != null)
-                    ? persona.nombres + " " + persona.apellidos : "Barbero";
+            ((TextView) item.findViewById(R.id.tv_barbero_nombre)).setText(barb.nombre);
 
-            ((TextView) item.findViewById(R.id.tv_barbero_nombre)).setText(nombre);
-
-            // Disponibilidad hoy
-            boolean dispHoy = cronogramas.stream()
-                    .anyMatch(c -> c.idbarbero == barb.idbarberos && hoy.equals(c.fecha));
-
-            String detalle = dispHoy ? "Disponible hoy" : "Disponible mañana";
+            String detalle = barb.dispHoy ? "Disponible hoy" : "Disponible mañana";
             ((TextView) item.findViewById(R.id.tv_barbero_detalle)).setText(detalle);
 
             TextView tvDisp = item.findViewById(R.id.tv_barbero_disp);
-            if (dispHoy) {
-                tvDisp.setText("Disp");
-            } else {
-                tvDisp.setText("Mañ");
-            }
+            tvDisp.setText(barb.dispHoy ? "Disp" : "Mañ");
 
-            final long idbarbero = barb.idbarberos;
+            final long idbarbero = barb.idbarbero;
             final long idservicioF = idservicio;
+            final String nombSrv = nombreServicio;
+            final String nombBarb = barb.nombre;
+            final int dur = duracion;
+            final double prec = precio;
             item.setOnClickListener(v -> {
                 Intent i = new Intent(this, ClienteBookingSummaryActivity.class);
                 i.putExtra("idservicio", idservicioF);
                 i.putExtra("idbarbero", idbarbero);
+                i.putExtra("nombreServicio", nombSrv);
+                i.putExtra("nombreBarbero", nombBarb);
+                i.putExtra("duracion", dur);
+                i.putExtra("precio", prec);
                 startActivity(i);
             });
             container.addView(item);

@@ -10,6 +10,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,6 +27,11 @@ public class ClienteBeneficiosActivity extends AppCompatActivity {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private int puntosDisponibles = 0;
+
+    private static class BeneficioUI {
+        String nombre;
+        int costepuntos;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,12 +58,25 @@ public class ClienteBeneficiosActivity extends AppCompatActivity {
                     .filter(b -> Boolean.TRUE.equals(b.estado))
                     .collect(java.util.stream.Collectors.toList());
 
+            // Resolver nombres de servicio en background
+            List<BeneficioUI> items = new ArrayList<>();
+            for (Beneficios b : beneficios) {
+                BeneficioUI ui = new BeneficioUI();
+                ui.costepuntos = b.costepuntos != null ? b.costepuntos : 0;
+                ui.nombre = "Beneficio";
+                if (b.servicio != null) {
+                    Servicios srv = db.serviciosDAO().obtenerPorId(b.servicio);
+                    if (srv != null && srv.nombre_servicio != null) ui.nombre = srv.nombre_servicio;
+                }
+                items.add(ui);
+            }
+
             final int puntosF = puntos;
-            runOnUiThread(() -> poblarUI(puntosF, beneficios, db));
+            runOnUiThread(() -> poblarUI(puntosF, items));
         });
     }
 
-    private void poblarUI(int puntos, List<Beneficios> beneficios, AppDB db) {
+    private void poblarUI(int puntos, List<BeneficioUI> items) {
         puntosDisponibles = puntos;
         ((TextView) findViewById(R.id.tv_puntos_disponibles)).setText(String.valueOf(puntos));
 
@@ -65,22 +84,14 @@ public class ClienteBeneficiosActivity extends AppCompatActivity {
         container.removeAllViews();
         LayoutInflater inf = LayoutInflater.from(this);
 
-        for (Beneficios b : beneficios) {
+        for (BeneficioUI b : items) {
             View item = inf.inflate(R.layout.item_beneficio_cliente, container, false);
 
-            // Nombre desde el servicio asociado
-            String nombre = "Beneficio";
-            if (b.servicio != null) {
-                Servicios srv = db.serviciosDAO().obtenerPorId(b.servicio);
-                if (srv != null) nombre = srv.nombre_servicio;
-            }
-            ((TextView) item.findViewById(R.id.tv_ben_nombre)).setText(nombre);
-
-            int costo = b.costepuntos != null ? b.costepuntos : 0;
-            ((TextView) item.findViewById(R.id.tv_ben_puntos)).setText(costo + " puntos requeridos");
+            ((TextView) item.findViewById(R.id.tv_ben_nombre)).setText(b.nombre);
+            ((TextView) item.findViewById(R.id.tv_ben_puntos)).setText(b.costepuntos + " puntos requeridos");
 
             TextView badge = item.findViewById(R.id.tv_ben_badge);
-            if (puntos >= costo) {
+            if (puntos >= b.costepuntos) {
                 badge.setText("Canj");
                 badge.setBackground(ContextCompat.getDrawable(this, R.drawable.bg_badge_teal));
                 badge.setTextColor(0xFF0F5159);
@@ -92,7 +103,7 @@ public class ClienteBeneficiosActivity extends AppCompatActivity {
             container.addView(item);
         }
 
-        if (beneficios.isEmpty()) {
+        if (items.isEmpty()) {
             findViewById(R.id.layout_sin_beneficios).setVisibility(View.VISIBLE);
         }
     }
