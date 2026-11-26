@@ -35,7 +35,6 @@ public class ClienteHomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_cliente_home);
         setupNavigation();
         cargarDatos();
-        findViewById(R.id.btn_menu).setOnClickListener(v -> cerrarSesion());
     }
 
     private void cargarDatos() {
