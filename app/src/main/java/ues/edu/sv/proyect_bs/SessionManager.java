@@ -3,7 +3,7 @@ package ues.edu.sv.proyect_bs;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-final class SessionManager {
+public final class SessionManager {
     private static final String PREFERENCES = "auth_session";
     private static final String TOKEN = "token";
     private static final String TOKEN_TYPE = "token_type";
@@ -17,7 +17,7 @@ final class SessionManager {
     private SessionManager() {
     }
 
-    static void save(Context context, String token, String tokenType, String profile,
+    public static void save(Context context, String token, String tokenType, String profile,
                      long userId, long personId) {
         preferences(context).edit()
                 .putString(TOKEN, token)
@@ -28,35 +28,35 @@ final class SessionManager {
                 .apply();
     }
 
-    static String getToken(Context context) {
+    public static String getToken(Context context) {
         return preferences(context).getString(TOKEN, null);
     }
 
-    static String getTokenType(Context context) {
+    public static String getTokenType(Context context) {
         return preferences(context).getString(TOKEN_TYPE, "Bearer");
     }
 
-    static String getProfile(Context context) {
+    public static String getProfile(Context context) {
         return preferences(context).getString(PROFILE, null);
     }
 
-    static long getUserId(Context context) {
+    public static long getUserId(Context context) {
         return preferences(context).getLong(USER_ID, 0L);
     }
 
-    static long getPersonId(Context context) {
+    public static long getPersonId(Context context) {
         return preferences(context).getLong(PERSON_ID, 0L);
     }
 
-    static boolean hasAdminAccess(Context context) {
+    public static boolean hasAdminAccess(Context context) {
         return getToken(context) != null && "ADMIN".equalsIgnoreCase(getProfile(context));
     }
 
-    static boolean shouldRememberLogin(Context context) {
+    public static boolean shouldRememberLogin(Context context) {
         return preferences(context).getBoolean(REMEMBER_LOGIN, false);
     }
 
-    static void setRememberLogin(Context context, boolean remember) {
+    public static void setRememberLogin(Context context, boolean remember) {
         preferences(context).edit()
                 .putBoolean(REMEMBER_LOGIN, remember)
                 .apply();
@@ -65,29 +65,29 @@ final class SessionManager {
         }
     }
 
-    static void saveLoginCredentials(Context context, String email, String password) {
+    public static void saveLoginCredentials(Context context, String email, String password) {
         preferences(context).edit()
                 .putString(SAVED_EMAIL, email)
                 .putString(SAVED_PASSWORD, password)
                 .apply();
     }
 
-    static String getSavedEmail(Context context) {
+    public static String getSavedEmail(Context context) {
         return preferences(context).getString(SAVED_EMAIL, "");
     }
 
-    static String getSavedPassword(Context context) {
+    public static String getSavedPassword(Context context) {
         return preferences(context).getString(SAVED_PASSWORD, "");
     }
 
-    static void clearSavedLogin(Context context) {
+    public static void clearSavedLogin(Context context) {
         preferences(context).edit()
                 .remove(SAVED_EMAIL)
                 .remove(SAVED_PASSWORD)
                 .apply();
     }
 
-    static void clear(Context context) {
+    public static void clear(Context context) {
         preferences(context).edit()
                 .remove(TOKEN)
                 .remove(TOKEN_TYPE)

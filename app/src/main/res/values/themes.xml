@@ -1,5 +1,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
+    <style name="ActivitySlideAnimation" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:activityOpenExitAnimation">@anim/slide_out_left</item>
+        <item name="android:activityCloseEnterAnimation">@anim/slide_in_left</item>
+        <item name="android:activityCloseExitAnimation">@anim/slide_out_right</item>
+    </style>
+
     <style name="Base.Theme.Proyect_BS" parent="Theme.Material3.Light.NoActionBar">
         <item name="adminSearchBackground">@android:color/white</item>
         <item name="adminSearchTextColor">#333333</item>
@@ -9,6 +16,7 @@
         <item name="android:statusBarColor">#C51B20</item>
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowAnimationStyle">@style/ActivitySlideAnimation</item>
     </style>
 
     <style name="Theme.Proyect_BS" parent="Base.Theme.Proyect_BS" />
