@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 
 import ues.edu.sv.proyect_bs.modulo.barbero.BarberoHomeActivity;
+import ues.edu.sv.proyect_bs.modulo.cliente.ClienteHomeActivity;
 
 public class RoleLandingActivity extends AppCompatActivity {
     private final AuthApiClient authApiClient = new AuthApiClient();
@@ -21,6 +22,13 @@ public class RoleLandingActivity extends AppCompatActivity {
         // Redirigir al módulo real cuando esté disponible
         if ("BARBERO".equalsIgnoreCase(profile)) {
             startActivity(new Intent(this, BarberoHomeActivity.class));
+            finish();
+            return;
+        }
+
+        // Redirigir módulo cliente
+        if ("CLIENTE".equalsIgnoreCase(profile)) {
+            startActivity(new Intent(this, ClienteHomeActivity.class));
             finish();
             return;
         }
