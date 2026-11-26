@@ -65,8 +65,6 @@ public class BarberoAppointmentsActivity extends AppCompatActivity {
         configurarTabs();
         setupNavigation();
         cargarDatos();
-
-        findViewById(R.id.btn_menu).setOnClickListener(v -> cerrarSesion());
     }
 
     // ── Tabs ─────────────────────────────────────────────────────────────────

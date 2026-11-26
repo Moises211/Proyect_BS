@@ -103,8 +103,7 @@ public class BarberoHomeActivity extends AppCompatActivity {
             // TODO: ir a BarberProfileActivity
         });
 
-        // Menú hamburguesa → cerrar sesión (provisional)
-        findViewById(R.id.btn_menu).setOnClickListener(v -> cerrarSesion());
+        // hamburguesa sin acción (logout solo desde Perfil)
     }
 
     // ── Carga de datos en hilo de fondo ─────────────────────────────────────

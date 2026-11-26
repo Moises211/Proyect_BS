@@ -57,8 +57,6 @@ public class BarberoScheduleActivity extends AppCompatActivity {
         configurarChips();
         setupNavigation();
         cargarDatos();
-
-        findViewById(R.id.btn_menu).setOnClickListener(v -> cerrarSesion());
     }
 
     // ── Semana ──────────────────────────────────────────────────────────────
