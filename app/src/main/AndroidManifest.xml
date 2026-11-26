@@ -31,6 +31,10 @@
         <activity
             android:name=".RoleLandingActivity"
             android:exported="false" />
+        <activity
+            android:name=".modulo.barbero.BarberoHomeActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>
