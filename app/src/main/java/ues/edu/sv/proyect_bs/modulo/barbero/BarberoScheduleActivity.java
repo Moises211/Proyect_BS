@@ -280,7 +280,8 @@ public class BarberoScheduleActivity extends AppCompatActivity {
             finish();
         });
         findViewById(R.id.nav_citas).setOnClickListener(v -> {
-            // TODO: ir a BarberoAppointmentsActivity
+            startActivity(new Intent(this, BarberoAppointmentsActivity.class));
+            finish();
         });
         findViewById(R.id.nav_servicios).setOnClickListener(v -> {
             // Ya estamos aquí, refrescar

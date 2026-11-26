@@ -88,9 +88,9 @@ public class BarberoHomeActivity extends AppCompatActivity {
         // nav_inicio ya es la pantalla activa; refresca al tocar
         findViewById(R.id.nav_inicio).setOnClickListener(v -> cargarDatos());
 
-        // Citas del barbero → próxima pantalla (placeholder hasta implementar)
+        // Citas del barbero
         findViewById(R.id.nav_citas).setOnClickListener(v -> {
-            // TODO: ir a BarberoAppointmentsActivity
+            startActivity(new Intent(this, BarberoAppointmentsActivity.class));
         });
 
         // Servicios/horarios
