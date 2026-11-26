@@ -138,12 +138,13 @@ public class ClienteHomeActivity extends AppCompatActivity {
         findViewById(R.id.nav_citas).setOnClickListener(v ->
                 startActivity(new Intent(this, ClienteAppointmentsActivity.class)));
         findViewById(R.id.nav_servicios).setOnClickListener(v ->
-                startActivity(new Intent(this, ClienteServicesActivity.class)));
-        findViewById(R.id.nav_perfil).setOnClickListener(v -> { /* TODO */ });
+                startActivity(new Intent(this, ClientePromocionesActivity.class)));
+        findViewById(R.id.nav_perfil).setOnClickListener(v ->
+                startActivity(new Intent(this, ClientePerfilActivity.class)));
         findViewById(R.id.row_servicios).setOnClickListener(v ->
                 startActivity(new Intent(this, ClienteServicesActivity.class)));
         findViewById(R.id.row_beneficios).setOnClickListener(v ->
-                startActivity(new Intent(this, ClienteAppointmentsActivity.class)));
+                startActivity(new Intent(this, ClienteBeneficiosActivity.class)));
     }
 
     private void cerrarSesion() {

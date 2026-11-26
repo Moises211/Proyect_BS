@@ -103,10 +103,13 @@ public class ClienteBarberActivity extends AppCompatActivity {
             finish();
         });
         findViewById(R.id.nav_servicios).setOnClickListener(v -> {
-            startActivity(new Intent(this, ClienteServicesActivity.class));
+            startActivity(new Intent(this, ClientePromocionesActivity.class));
             finish();
         });
-        findViewById(R.id.nav_perfil).setOnClickListener(v -> { /* TODO */ });
+        findViewById(R.id.nav_perfil).setOnClickListener(v -> {
+            startActivity(new Intent(this, ClientePerfilActivity.class));
+            finish();
+        });
     }
 
     @Override

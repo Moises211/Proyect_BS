@@ -63,6 +63,18 @@
             android:name=".modulo.cliente.ClienteBookingSummaryActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".modulo.cliente.ClientePromocionesActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".modulo.cliente.ClienteBeneficiosActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".modulo.cliente.ClientePerfilActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>

@@ -185,8 +185,9 @@ public class ClienteAppointmentsActivity extends AppCompatActivity {
         });
         findViewById(R.id.nav_citas).setOnClickListener(v -> cargarDatos());
         findViewById(R.id.nav_servicios).setOnClickListener(v ->
-                startActivity(new Intent(this, ClienteServicesActivity.class)));
-        findViewById(R.id.nav_perfil).setOnClickListener(v -> { /* TODO */ });
+                startActivity(new Intent(this, ClientePromocionesActivity.class)));
+        findViewById(R.id.nav_perfil).setOnClickListener(v ->
+                startActivity(new Intent(this, ClientePerfilActivity.class)));
     }
 
     private void cerrarSesion() {

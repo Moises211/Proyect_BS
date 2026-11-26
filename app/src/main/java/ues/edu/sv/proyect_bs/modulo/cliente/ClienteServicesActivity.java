@@ -81,8 +81,14 @@ public class ClienteServicesActivity extends AppCompatActivity {
             startActivity(new Intent(this, ClienteAppointmentsActivity.class));
             finish();
         });
-        findViewById(R.id.nav_servicios).setOnClickListener(v -> cargarServicios());
-        findViewById(R.id.nav_perfil).setOnClickListener(v -> { /* TODO */ });
+        findViewById(R.id.nav_servicios).setOnClickListener(v -> {
+            startActivity(new Intent(this, ClientePromocionesActivity.class));
+            finish();
+        });
+        findViewById(R.id.nav_perfil).setOnClickListener(v -> {
+            startActivity(new Intent(this, ClientePerfilActivity.class));
+            finish();
+        });
     }
 
     @Override
