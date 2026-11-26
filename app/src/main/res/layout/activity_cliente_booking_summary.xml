@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F3F4F6"
+    android:background="@color/gc_bg_page"
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
@@ -66,7 +66,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Resumen de Cita"
-                android:textColor="#111827"
+                android:textColor="@color/gc_text_primary"
                 android:textSize="22sp"
                 android:textStyle="bold" />
 
@@ -76,7 +76,7 @@
                 android:layout_marginTop="2dp"
                 android:layout_marginBottom="20dp"
                 android:text="Administra tu cita"
-                android:textColor="#6B7280"
+                android:textColor="@color/gc_text_hint"
                 android:textSize="13sp" />
 
             <!-- Card Servicio -->
@@ -107,7 +107,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Servicio"
-                        android:textColor="#111827"
+                        android:textColor="@color/gc_text_primary"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -117,7 +117,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="— min · $—"
-                        android:textColor="#6B7280"
+                        android:textColor="@color/gc_text_hint"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -125,7 +125,7 @@
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@drawable/ic_chevron_right"
-                    app:tint="#9CA3AF" />
+                    app:tint="@color/gc_text_muted" />
             </LinearLayout>
 
             <!-- Card Barbero -->
@@ -156,7 +156,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Barbero"
-                        android:textColor="#111827"
+                        android:textColor="@color/gc_text_primary"
                         android:textSize="15sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -165,7 +165,7 @@
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@drawable/ic_chevron_right"
-                    app:tint="#9CA3AF" />
+                    app:tint="@color/gc_text_muted" />
             </LinearLayout>
 
             <!-- Card Horario -->
@@ -188,7 +188,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Horario disponible"
-                        android:textColor="#111827"
+                        android:textColor="@color/gc_text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -198,7 +198,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="Calculando..."
-                        android:textColor="#6B7280"
+                        android:textColor="@color/gc_text_hint"
                         android:textSize="13sp" />
                 </LinearLayout>
 

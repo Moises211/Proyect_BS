@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F3F4F6"
+    android:background="@color/gc_bg_page"
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
@@ -70,7 +70,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Hola, Barbero"
-                android:textColor="#111827"
+                android:textColor="@color/gc_text_primary"
                 android:textSize="24sp"
                 android:textStyle="bold" />
 
@@ -81,7 +81,7 @@
                 android:layout_marginTop="2dp"
                 android:layout_marginBottom="20dp"
                 android:text="Hoy · Turno Completo"
-                android:textColor="#6B7280"
+                android:textColor="@color/gc_text_hint"
                 android:textSize="13sp" />
 
             <!-- ── Tarjetas métricas ── -->
@@ -105,7 +105,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Citas hoy"
-                        android:textColor="#6B7280"
+                        android:textColor="@color/gc_text_hint"
                         android:textSize="11sp" />
 
                     <TextView
@@ -133,7 +133,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="En atención"
-                        android:textColor="#6B7280"
+                        android:textColor="@color/gc_text_hint"
                         android:textSize="11sp" />
 
                     <TextView
@@ -160,7 +160,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Completadas"
-                        android:textColor="#6B7280"
+                        android:textColor="@color/gc_text_hint"
                         android:textSize="11sp" />
 
                     <TextView
@@ -197,7 +197,7 @@
                         android:layout_height="wrap_content"
                         android:layout_centerVertical="true"
                         android:text="Atención actual"
-                        android:textColor="#111827"
+                        android:textColor="@color/gc_text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
@@ -219,7 +219,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="10:30-11:00 · —"
-                    android:textColor="#111827"
+                    android:textColor="@color/gc_text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
@@ -231,7 +231,7 @@
                     android:layout_marginTop="2dp"
                     android:layout_marginBottom="14dp"
                     android:text="Servicio · — min"
-                    android:textColor="#6B7280"
+                    android:textColor="@color/gc_text_hint"
                     android:textSize="13sp" />
 
                 <!-- Botón finalizar -->
@@ -275,7 +275,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Siguiente cita"
-                        android:textColor="#111827"
+                        android:textColor="@color/gc_text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -285,7 +285,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="—"
-                        android:textColor="#6B7280"
+                        android:textColor="@color/gc_text_hint"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -328,7 +328,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Mi horario"
-                        android:textColor="#111827"
+                        android:textColor="@color/gc_text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -338,7 +338,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="—"
-                        android:textColor="#6B7280"
+                        android:textColor="@color/gc_text_hint"
                         android:textSize="12sp" />
                 </LinearLayout>
 
@@ -376,7 +376,7 @@
                     android:layout_marginTop="12dp"
                     android:gravity="center"
                     android:text="Sin citas para hoy"
-                    android:textColor="#9CA3AF"
+                    android:textColor="@color/gc_text_muted"
                     android:textSize="14sp" />
             </LinearLayout>
 
@@ -387,7 +387,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:background="#FFFFFF"
+        android:background="@color/gc_bg_card"
         android:elevation="8dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
@@ -429,7 +429,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_event"
-                app:tint="#9CA3AF" />
+                app:tint="@color/gc_text_muted" />
         </LinearLayout>
 
         <!-- Servicios -->
@@ -445,7 +445,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_content_cut"
-                app:tint="#9CA3AF" />
+                app:tint="@color/gc_text_muted" />
         </LinearLayout>
 
         <!-- Perfil -->
@@ -461,7 +461,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_person"
-                app:tint="#9CA3AF" />
+                app:tint="@color/gc_text_muted" />
         </LinearLayout>
     </LinearLayout>
 
