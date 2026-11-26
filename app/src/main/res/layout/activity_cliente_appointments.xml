@@ -54,7 +54,7 @@
             android:layout_centerVertical="true"
             android:background="#B01519"
             android:padding="8dp"
-            android:src="@drawable/ic_menu"
+            android:src="@drawable/ic_add"
             app:tint="#FFFFFF" />
     </RelativeLayout>
 
